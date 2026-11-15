@@ -3,7 +3,7 @@ import type { Binding, Provider } from './types.ts';
 // provider, model and the optional mode/thinking/features settings.
 // This module owns every rule a Binding must satisfy, whatever produced it.
 // Shared family data is dependency-free; binding validation stays at this adapter.
-import { PROVIDER_EXTENDS } from "../../../shared/runtime/families.ts";
+import { PROVIDER_EXTENDS, GRANT_FAMILY_IDS, WRAPPER_FAMILY_IDS } from "../../../shared/runtime/families.ts";
 import { swe2ModelPattern } from "../../../shared/runtime/model-constraints.ts";
 export { swe2ModelPattern } from "../../../shared/runtime/model-constraints.ts";
 
@@ -61,9 +61,10 @@ export function verifyProvider(inventory: Provider[] | undefined, id: string, fa
   const extraKeys = Object.keys(observed).filter(key => !providerRecordAllowedKeys.includes(key));
   if (extraKeys.length) throw new Error(`Unverified provider ${label}: unexpected field(s) ${extraKeys.map(key => `'${key}'`).join(', ')} — the provider object must be verbatim from list_providers; do not add, remove or edit fields`);
   const family = familyFor(observed.id);
-  // OpenCode must prove the ACP adapter explicitly; a missing extends is
-  // native/default host selection, outside the supported managed boundary.
-  if ((family === "opencode" && observed.extends !== "acp") || (observed.extends != null && observed.extends !== transportOf(family))) throw new Error(`Unverified provider family ${label}: the entry's 'extends' (${observed.extends}) does not match the '${family}' transport '${transportOf(family)}' — the provider object must be verbatim from list_providers; do not add, remove or edit fields`);
+  // Grant-bearing wrappers must prove the ACP adapter explicitly; a missing
+  // extends is native/default host selection, outside their supported boundary.
+  const requiresAcp = GRANT_FAMILY_IDS.some(id => id === family) && WRAPPER_FAMILY_IDS.some(id => id === family);
+  if ((requiresAcp && observed.extends !== "acp") || (observed.extends != null && observed.extends !== transportOf(family))) throw new Error(`Unverified provider family ${label}: the entry's 'extends' (${observed.extends}) does not match the '${family}' transport '${transportOf(family)}' — the provider object must be verbatim from list_providers; do not add, remove or edit fields`);
   return { observed, family };
 }
 

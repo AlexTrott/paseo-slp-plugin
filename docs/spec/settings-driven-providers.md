@@ -23,6 +23,7 @@ order are separate contracts.
 | Devin | Shim + ACP wrapper | `acp` | Wrapper verification |
 | OpenCode | Shim + ACP wrapper | `acp` | Required before ACP child start |
 | Antigravity | Create hook + sentinel gate | Registered `slp-antigravity-*` | Required |
+| Grok | Shim + authenticated ACP wrapper | `acp` | Required before ACP child start |
 
 Antigravity uses registered native providers and `agy` stream-json. Their
 owned configuration omits `extends`; registrations reject their inert default
@@ -34,7 +35,9 @@ OpenCode's native transport is unsupported; version and proof limits belong
 to [OpenCode support](../opencode.md). Adding a family requires a registry
 entry, executable recognition, payload bootstrap handling and tests. The shim
 also validates its bootstrap family/role domain before importing TypeScript;
-keep that independent validation current. Persisted-domain expansion requires
+keep that independent validation current. Grok uses `agent stdio` and completes
+noninteractive authentication before the host begins session discovery; see
+[Grok support](../grok.md). Persisted-domain expansion requires
 historical hash, ownership and CAS compatibility review. Registry derivation
 never authorizes rewriting retained records.
 
@@ -80,7 +83,7 @@ command tail and provider env. `[node, gate]` would probe Node's version;
 an env-dependent launcher would not resolve its binary. Launchers clear
 `NODE_OPTIONS` before Node starts, in addition to child runtime sanitization.
 
-Launch sets publish eighteen files: twelve hook gates and six ACP shim
+Launch sets publish twenty-one files: twelve hook gates and nine ACP shim
 dispatchers. Manifests pin `launcherFamilies` and `gateFamilies` so verification
 reconstructs the correct bytes. Retained manifests without these fields use
 their historical all-shim plan and exact domain.

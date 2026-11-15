@@ -88,29 +88,32 @@ test('preset-capable task dispatch retains model metadata and binds the selected
  assert.equal(resolved.thinkingOptionId,'medium');
 });
 
-test('task runtime resolves OpenCode only with live ACP transport and ready SDK evidence',async t=>{
- const f=fixture(t);Object.assign(f.pool.options[0],{provider:'opencode',model:'provider/nested/model',modeId:'build'});f.savePool();
- f.setEntries([{provider:'slp-opencode-peer',enabled:true,status:'ready'}]);
+for (const family of ['opencode', 'grok']) {
+test(`task runtime resolves ${family} only with live ACP transport and ready SDK evidence`,async t=>{
+ const provider=`slp-${family}-peer`;
+ const f=fixture(t);Object.assign(f.pool.options[0],{provider:family,model:'provider/nested/model',modeId:'build'});f.savePool();
+ f.setEntries([{provider,enabled:true,status:'ready'}]);
  let reads=0;
- f.host.config={get:async()=>{reads++;return {config:{providers:{'slp-opencode-peer':{extends:'acp'}}}};}};
+ f.host.config={get:async()=>{reads++;return {config:{providers:{[provider]:{extends:'acp'}}}};}};
  const result=await f.resolver(f.repository,f.selection());
- assert.equal(result.provider,'slp-opencode-peer');assert.equal(result.model,'provider/nested/model');assert.equal(reads,2);
- f.host.config.get=async()=>({config:{providers:{'slp-opencode-peer':{extends:'opencode'}}}});
+ assert.equal(result.provider,provider);assert.equal(result.model,'provider/nested/model');assert.equal(reads,2);
+ f.host.config.get=async()=>({config:{providers:{[provider]:{extends:family}}}});
  assert.equal((await f.resolver(f.repository,f.selection())).ok,false);
  f.host.config.get=async()=>assert.fail('disabled SDK observation cannot acquire transport/availability from config');
- f.setEntries([{provider:'slp-opencode-peer',enabled:false,status:'ready'}]);
+ f.setEntries([{provider,enabled:false,status:'ready'}]);
  assert.equal((await f.resolver(f.repository,f.selection())).ok,false);
 });
 
-test('published native OpenCode transport is never overwritten by configured ACP',async t=>{
- const f=fixture(t);Object.assign(f.pool.options[0],{provider:'opencode',model:'provider/model',modeId:'build'});f.savePool();
- f.setEntries([{provider:'slp-opencode-peer',enabled:true,status:'ready',extends:'opencode'}]);
+test(`published native ${family} transport is never overwritten by configured ACP`,async t=>{
+ const f=fixture(t);Object.assign(f.pool.options[0],{provider:family,model:'provider/model',modeId:'build'});f.savePool();
+ f.setEntries([{provider:`slp-${family}-peer`,enabled:true,status:'ready',extends:family}]);
  f.host.config={get:async()=>assert.fail('published conflicting transport must not be repaired')};
  const result=await f.resolver(f.repository,f.selection());
- assert.equal(result.ok,false);assert.match(result.message,/extends.*opencode.*acp/);
+ assert.equal(result.ok,false);assert.match(result.message,new RegExp(`extends.*${family}.*acp`));
 });
+}
 
-test('non-OpenCode resolution does not acquire a config-read dependency',async t=>{
+test('other provider resolution does not acquire a config-read dependency',async t=>{
  const f=fixture(t);f.host.config={get:async()=>assert.fail('unrelated provider transport read')};
  assert.equal((await f.resolver(f.repository,f.selection())).provider,'slp-devin-peer');
 });

@@ -24,11 +24,11 @@ import { roleBundle } from '../plugin/server/runtime/cli/role-bundle.ts';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const GATE = join(root, 'bin', 'slp-gate.mjs');
 const HOOK_FAMILIES = ['codex', 'pi', 'claude', 'antigravity'];
-const ALL_FAMILIES = [...HOOK_FAMILIES, 'devin', 'opencode'];
+const ALL_FAMILIES = [...HOOK_FAMILIES, 'devin', 'opencode', 'grok'];
 const ROLES = ['supervisor', 'lead', 'peer'];
 const HOOK_IDS = HOOK_FAMILIES.flatMap(f => ROLES.map(r => `slp-${f}-${r}`));
 const DEVIN_IDS = ROLES.map(r => `slp-devin-${r}`);
-const WRAPPER_IDS = [...DEVIN_IDS, ...ROLES.map(r => `slp-opencode-${r}`)];
+const WRAPPER_IDS = [...DEVIN_IDS, ...['opencode', 'grok'].flatMap(f => ROLES.map(r => `slp-${f}-${r}`))];
 const OWNED_IDS = [...HOOK_IDS, ...WRAPPER_IDS].sort();
 
 function tmp(t, prefix = 'roleinj-') {
@@ -711,7 +711,7 @@ test('thin aliases: every entry gets a single-element launcher argv0; hook env a
   );
   const resolution = { node: { path: '/opt/node/bin/node', version: '24.0.0' }, binaries };
   const entries = desiredProviderEntries(launchSet, resolution, f.candidate, f.home, null);
-  assert.equal(Object.keys(entries).length, 18);
+  assert.equal(Object.keys(entries).length, OWNED_IDS.length);
   for (const id of OWNED_IDS) {
     const family = id.split('-')[1];
     const entry = entries[id];
@@ -730,7 +730,7 @@ test('thin aliases: every entry gets a single-element launcher argv0; hook env a
     // One label template for every transport: `SLP <Family> <Role>` with
     // FAMILY_LABEL as the single display-name source.
     assert.equal(entry.label, `SLP ${FAMILY_LABEL[family]} ${roleDisplay}`);
-    if (['devin', 'opencode'].includes(family)) {
+    if (['devin', 'opencode', 'grok'].includes(family)) {
       assert.equal(entry.extends, 'acp');
       assert.equal(entry.env.SLP_FAMILY_BIN, undefined);
       continue;

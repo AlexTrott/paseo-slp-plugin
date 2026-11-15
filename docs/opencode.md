@@ -83,13 +83,13 @@ instructions. V1 [rules](https://opencode.ai/docs/rules/) and
 [inline configuration](https://opencode.ai/docs/config/) do not establish a
 V2 file transport; the package does not use one.
 
-Persisted compatibility is historical-aware: exact legacy4/legacy12 and
-current5/current15 domains are admitted; partial, mixed and unknown sets are
+Persisted compatibility is historical-aware: exact four-, five- and six-family
+histories and the current seven-family/21-provider domain are admitted; partial, mixed and unknown sets are
 refused. Persisted observations also retain the bounded native `extends:
 opencode` field verbatim; it is not a current authored provider or launch
 transport. New owned OpenCode entries require `extends: acp`. Reading old bindings, plans, snapshots and standalone receipts adds
 no default OpenCode fields and verifies their original recorded digests.
-New activation plans/snapshots/bindings use current5/current15 while retaining
+New activation plans/snapshots/bindings use the current registry domain while retaining
 the exact original baseline and legacy history. Recovery may restore an
 already pinned legacy binding verbatim; it cannot author a modified legacy
 artifact. Legacy profile-preference acknowledgment requires activation into
@@ -100,7 +100,7 @@ requires newly introduced IDs to be absent or explicitly and exactly adopted.
 Deactivation and historical recovery patch only their recorded ownership
 sets, preserving unrelated new-family entries. Historical endpoint comparison
 also computes unrelated-state hashes using its original provider domain.
-Legacy launch sets are verified against their recorded four-family manifests;
+Legacy launch sets are verified against their exact recorded family manifests;
 new publication requires the complete current domain. These are package
 receipt/transaction invariants: a repository protocol cannot validate another
 daemon's persisted ownership, hashes or CAS writes.
@@ -109,6 +109,6 @@ The standalone installer additionally reads a distinct, previously supported
 Codex3 format: exactly three `slp-codex-{role}` providers and three matching
 Supervisor/Lead/Peer profiles. It verifies the installed manifest and raw
 binding digest first, then validates that historical shape without rewriting.
-Successful upgrade writes current15, preserving old files, original MCP
+Successful upgrade writes the current 18-provider standalone domain, preserving old files, original MCP
 baseline and preferences, and archives the retired `slp-peer` row. This domain
 never enters the plugin journal or launch-manifest decoder.

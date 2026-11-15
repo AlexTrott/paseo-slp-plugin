@@ -8,7 +8,7 @@ import { createManager } from '../plugin/server/manager.ts';
 import { canonicalSha256, effectiveView, extractProjection, unrelatedPersistedView } from '../plugin/server/config-view.ts';
 import { classifyState, patchForDirection } from '../plugin/server/config-transaction.ts';
 import { Receipt, OwnedProvider, PersistedProvider, Projection } from '../plugin/shared/contracts.ts';
-import { LEGACY_FAMILY_IDS, PRE_ANTIGRAVITY_FAMILY_IDS, FAMILY_IDS, ROLES, LEGACY_OWNED_PROVIDER_IDS, OWNED_PROVIDER_IDS } from '../plugin/shared/runtime/families.ts';
+import { LEGACY_FAMILY_IDS, PRE_ANTIGRAVITY_FAMILY_IDS, PRE_GROK_FAMILY_IDS, FAMILY_IDS, ROLES, LEGACY_OWNED_PROVIDER_IDS, OWNED_PROVIDER_IDS } from '../plugin/shared/runtime/families.ts';
 import { activateInput, deactivateInput, reconcileInput, makePluginFixture, makeDeps, makeDaemon, receiptPath, readReceipt, readConfigJson, sha256, waitTerminal, waitRecovery, dirBlocker, armRecoveryFault } from './helpers/plugin-doubles.mjs';
 
 const addedIds = ['slp-opencode-supervisor', 'slp-opencode-lead', 'slp-opencode-peer'];
@@ -77,7 +77,7 @@ async function legacyFixture(t, { inactive = false, pending = false, families = 
   return { ...f, receipt, bytes, journal, stableRoot: join(f.home, 'slp-runtime'), rootOperationId: start.operation.operationId, manager: createManager(makeDeps({ payload: f.deps.payload, execOpts: { binaries: f.binaries } })) };
 }
 
-test('pre-Antigravity five-family histories preserve bytes across read/CAS and rebind to six families', async t => {
+test('pre-Antigravity five-family histories preserve bytes across read/CAS and rebind to seven families', async t => {
   const f = await legacyFixture(t, { families: PRE_ANTIGRAVITY_FAMILY_IDS });
   assert.equal(Object.keys(f.receipt.binding.binaries).length, 5);
   assert.equal(Object.keys(f.receipt.binding.owned.providers).length, 15);
@@ -92,8 +92,53 @@ test('pre-Antigravity five-family histories preserve bytes across read/CAS and r
   const start = await f.manager.activate(activateInput(f.home, f.deps.payload, randomUUID()), f.daemon);
   const done = await waitTerminal(f.manager, f.home, start.operation.operationId, f.daemon);
   assert.equal(done.operation.outcome, 'succeeded', JSON.stringify(done.conflicts));
-  assert.equal(Object.keys(readReceipt(f.home).binding.binaries).length, 6);
+  assert.equal(Object.keys(readReceipt(f.home).binding.binaries).length, 7);
   assert.deepEqual(readReceipt(f.home).operations[0], f.receipt.operations[0]);
+});
+
+test('pre-Grok active and inactive six-family histories retain hashes and CAS evidence across a seven-family rebind', async t => {
+  for (const inactive of [false, true]) {
+    const f = await legacyFixture(t, { families: PRE_GROK_FAMILY_IDS, inactive });
+    const oldBinding = f.receipt.binding ?? f.receipt.operations[0].plan.nextBinding;
+    assert.equal(Object.keys(oldBinding.binaries).length, 6);
+    assert.equal(Object.keys(oldBinding.owned.providers).length, 18);
+    assert.equal(Object.hasOwn(oldBinding.binaries, 'grok'), false);
+    assert.equal(Object.hasOwn(oldBinding.owned.providers, 'slp-grok-peer'), false);
+    assert.deepEqual(f.journal.read(f.stableRoot), f.receipt);
+    assert.equal(readFileSync(receiptPath(f.home), 'utf8'), f.bytes);
+    const unchanged = structuredClone(f.receipt); unchanged.revision++;
+    f.journal.write(f.stableRoot, unchanged);
+    assert.deepEqual(readReceipt(f.home).operations, f.receipt.operations);
+    assert.deepEqual(readReceipt(f.home).binding, f.receipt.binding);
+    const stable = readFileSync(receiptPath(f.home), 'utf8');
+    const edited = structuredClone(unchanged); edited.revision++;
+    (edited.binding ?? edited.operations[0].plan.nextBinding).verifiedAt = '2026-11-15T00:00:00.000Z';
+    assert.throws(() => f.journal.write(f.stableRoot, edited), /historical/);
+    assert.equal(readFileSync(receiptPath(f.home), 'utf8'), stable);
+    const start = await f.manager.activate(activateInput(f.home, f.deps.payload, randomUUID()), f.daemon);
+    const done = await waitTerminal(f.manager, f.home, start.operation.operationId, f.daemon);
+    assert.equal(done.operation.outcome, 'succeeded', JSON.stringify(done.conflicts));
+    const current = readReceipt(f.home);
+    assert.equal(Object.keys(current.binding.binaries).length, 7);
+    assert.equal(Object.keys(current.binding.owned.providers).length, 21);
+    assert.deepEqual(current.operations.slice(0, f.receipt.operations.length), f.receipt.operations);
+    if (!inactive) assert.deepEqual(current.binding.beforeActivation, f.receipt.binding.beforeActivation);
+  }
+});
+
+test('pre-Grok receipts reject partial Grok domains and preserve invalid evidence', async t => {
+  const f = await legacyFixture(t, { families: PRE_GROK_FAMILY_IDS });
+  for (const mutate of [
+    r => { r.binding.binaries.grok = { available: false, path: null, version: null }; },
+    r => { r.binding.owned.providers['slp-grok-peer'] = { present: false }; },
+    r => { for (const role of ROLES) r.binding.owned.providers[`slp-grok-${role}`] = { present: false }; },
+    r => { delete r.binding.binaries.antigravity; r.binding.binaries.grok = { available: false, path: null, version: null }; },
+  ]) {
+    const changed = structuredClone(f.receipt); mutate(changed);
+    const bytes = encoded(changed); writeFileSync(receiptPath(f.home), bytes);
+    assert.throws(() => f.journal.read(f.stableRoot), error => error.code === 'RECOVERY_REQUIRED');
+    assert.equal(readFileSync(receiptPath(f.home), 'utf8'), bytes);
+  }
 });
 
 test('legacy active and inactive histories read verbatim, preserve every digest and do not gain absent OpenCode slots', async t => {
@@ -157,7 +202,7 @@ test('journal retains old artifacts across CAS writes but rejects new or edited 
   assert.throws(() => f.journal.write(join(f.home, 'new-empty-root'), fresh), /new or modified historical/);
 });
 
-test('authorized rebind emits current15/current5 while preserving the exact legacy plan, baseline and edited profile bundle', async t => {
+test('authorized rebind emits current21/current7 while preserving the exact legacy plan, baseline and edited profile bundle', async t => {
   const f = await legacyFixture(t);
   const config = readConfigJson(f.home);
   config.agents.providers.personal = { extends: 'codex', label: 'Unrelated', command: ['/bin/true'] };
@@ -169,13 +214,13 @@ test('authorized rebind emits current15/current5 while preserving the exact lega
   const done = await waitTerminal(f.manager, f.home, start.operation.operationId, f.daemon);
   assert.equal(done.operation.outcome, 'succeeded', JSON.stringify(done.conflicts));
   const read = readReceipt(f.home);
-  assert.equal(Object.keys(read.binding.binaries).length, 6); assert.equal(Object.keys(read.binding.owned.providers).length, 18);
+  assert.equal(Object.keys(read.binding.binaries).length, 7); assert.equal(Object.keys(read.binding.owned.providers).length, 21);
   assert.deepEqual(read.operations[0], f.receipt.operations[0]); assert.deepEqual(read.binding.beforeActivation, f.receipt.binding.beforeActivation);
   assert.deepEqual(readConfigJson(f.home).agents.providers.personal, config.agents.providers.personal);
   const result = readConfigJson(f.home).daemon.agentProfiles.find(p => p.id === 'slp-lead');
   for (const key of ['model', 'modeId', 'thinkingOptionId', 'featureValues']) assert.deepEqual(result[key], profile[key]);
   const plan = read.operations.at(-1).plan;
-  assert.equal(Object.keys(plan.before.owned.providers).length, 18); assert.equal(Object.keys(plan.afterOwned.providers).length, 18);
+  assert.equal(Object.keys(plan.before.owned.providers).length, 21); assert.equal(Object.keys(plan.afterOwned.providers).length, 21);
   assert.deepEqual(plan.previousBinding, f.receipt.binding);
 });
 
@@ -223,6 +268,50 @@ test('five-family history cannot acquire a foreign Antigravity slot and deactiva
   assert.ok(!f.daemon.patchCalls.at(-1).removeProviders.includes('slp-antigravity-peer'));
 });
 
+test('six-family history cannot acquire a foreign Grok slot and deactivation preserves it', async t => {
+  const f = await legacyFixture(t, { families: PRE_GROK_FAMILY_IDS });
+  const config = readConfigJson(f.home);
+  const foreign = { extends: 'acp', label: 'Human Grok', command: ['/bin/true'], enabled: true, env: { KEEP: 'verbatim' } };
+  config.agents.providers['slp-grok-peer'] = foreign;
+  writeFileSync(join(f.home, 'config.json'), encoded(config));
+  f.daemon = await makeDaemon(t, f.home);
+  const before = readFileSync(join(f.home, 'config.json'), 'utf8');
+  const patchesBefore = f.daemon.patchCalls.length;
+  const start = await f.manager.activate(activateInput(f.home, f.deps.payload, randomUUID()), f.daemon);
+  const failed = await waitTerminal(f.manager, f.home, start.operation.operationId, f.daemon);
+  assert.equal(failed.operation.outcome, 'failed');
+  assert.ok(readReceipt(f.home).operations.at(-1).conflicts.some(c => c.code === 'COLLISION'));
+  assert.equal(f.daemon.patchCalls.length, patchesBefore, 'collision precedes daemon effects');
+  assert.equal(readFileSync(join(f.home, 'config.json'), 'utf8'), before);
+  assert.deepEqual(readReceipt(f.home).binding, f.receipt.binding);
+  const deactivate = await f.manager.deactivate(deactivateInput(f.home, randomUUID(), f.receipt.binding.bindingSha256), f.daemon);
+  const done = await waitTerminal(f.manager, f.home, deactivate.operation.operationId, f.daemon);
+  assert.equal(done.operation.outcome, 'succeeded', JSON.stringify(done.conflicts));
+  assert.deepEqual(readConfigJson(f.home).agents.providers['slp-grok-peer'], foreign);
+  assert.ok(!f.daemon.patchCalls.at(-1).removeProviders.includes('slp-grok-peer'));
+});
+
+test('pending six-family recovery restores its pinned plan without acquiring Grok ownership', async t => {
+  for (const action of ['complete', 'restore-before']) {
+    const f = await legacyFixture(t, { families: PRE_GROK_FAMILY_IDS, pending: true });
+    const oldPlan = structuredClone(f.receipt.operations[0].plan);
+    const start = await f.manager.reconcile(reconcileInput(f.home, randomUUID(), action, f.rootOperationId), f.daemon);
+    const done = await waitTerminal(f.manager, f.home, start.operation.operationId, f.daemon);
+    assert.equal(done.operation.outcome, 'succeeded', JSON.stringify(done.conflicts));
+    const current = readReceipt(f.home);
+    assert.deepEqual(current.operations[0].plan, oldPlan);
+    assert.ok(Object.keys(readConfigJson(f.home).agents?.providers ?? {}).every(id => !id.startsWith('slp-grok-')));
+    if (action === 'complete') {
+      assert.equal(done.state, 'ACTIVE');
+      assert.equal(Object.keys(current.binding.binaries).length, 6);
+      assert.deepEqual(current.binding, oldPlan.nextBinding);
+    } else {
+      assert.equal(done.state, 'INACTIVE');
+      assert.equal(current.binding, null);
+    }
+  }
+});
+
 test('pending legacy recovery completes or restores its original pinned plan without adding OpenCode ownership', async t => {
   for (const action of ['complete', 'restore-before']) {
     const f = await legacyFixture(t, { pending: true });
@@ -243,13 +332,13 @@ test('legacy endpoint comparison hashes its own unrelated domain; inverse recove
   const f = await legacyFixture(t, { pending: true }); const plan = f.receipt.operations[0].plan;
   const config = readConfigJson(f.home); const effective = effectiveView((await f.daemon.config.get()).config);
   assert.equal(classifyState(config, (await f.daemon.config.get()).config, plan).class, 'before');
-  const current = extractProjection(config, 'COLLISION'); assert.equal(Object.keys(current.providers).length, 18);
+  const current = extractProjection(config, 'COLLISION'); assert.equal(Object.keys(current.providers).length, 21);
   const historical = extractProjection(config, 'COLLISION', LEGACY_OWNED_PROVIDER_IDS); assert.equal(Object.keys(historical.providers).length, 12);
   const changed = structuredClone(config); changed.agents ??= {}; changed.agents.providers ??= {}; changed.agents.providers['slp-opencode-peer'] = { extends: 'opencode', label: 'External', command: ['/bin/true'], enabled: true, env: {} };
   assert.notEqual(canonicalSha256(unrelatedPersistedView(changed, LEGACY_OWNED_PROVIDER_IDS)), canonicalSha256(unrelatedPersistedView(config, LEGACY_OWNED_PROVIDER_IDS)));
   const inverse = patchForDirection(plan, 'activate', 'inverse', changed);
   assert.deepEqual(inverse.removeProviders.sort(), [...LEGACY_OWNED_PROVIDER_IDS].sort());
-  assert.equal(OWNED_PROVIDER_IDS.length, 18); assert.equal(effective.enabled, true);
+  assert.equal(OWNED_PROVIDER_IDS.length, 21); assert.equal(effective.enabled, true);
 });
 
 

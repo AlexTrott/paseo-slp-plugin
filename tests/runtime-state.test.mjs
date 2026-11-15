@@ -15,7 +15,7 @@ import { createManager } from '../plugin/server/manager.ts';
 import { createStateStore } from '../plugin/server/state-store.ts';
 import { fakeOrKey } from './fake-secrets.mjs';
 import {
-  activateInput, makeBinaries, makeDaemon, makeDeps, makeHome,
+  OWNED_IDS, activateInput, makeBinaries, makeDaemon, makeDeps, makeHome,
   statusInput, targetOf, waitTerminal,
 } from './helpers/plugin-doubles.mjs';
 import { readFileSync } from 'node:fs';
@@ -307,7 +307,7 @@ test('an activated binding reads back through both the plugin status RPC and the
   assert.equal(status.state, 'ACTIVE');
   assert.equal(status.checks.targetMatch, true);
   assert.equal(status.receipt.binding.candidateSha256, deps.payload.candidate.sha256);
-  assert.equal(status.receipt.binding.launcherCount, 18);
+  assert.equal(status.receipt.binding.launcherCount, OWNED_IDS.length);
   assert.ok(status.checks.launchers.every(file => file.ok), 'recorded launcher bytes re-hash from disk');
   assert.deepEqual(status.checks.configDrift.missingProviders, []);
   assert.deepEqual(status.checks.configDrift.missingProfiles, []);

@@ -19,7 +19,7 @@ Set up `.paseo-slp/workspace-protocol.md` for minimum sufficient coordination. A
 
 The repository desk preserves assignments, current briefs, decisions, dependencies, review and evidence. Its task queue supports Lead-invoked dispatch and integration, and planned handoff keeps an assignment's history. Open **Read SLP work** to inspect these records in the workspace. The desk distinguishes reported results from measured evidence; final acceptance stays with you.
 
-Each team member is an ordinary Paseo agent you can open and chat with. Agents can use Codex, Pi, Devin, Claude Code, OpenCode or Antigravity, with different providers and models in the same team.
+Each team member is an ordinary Paseo agent you can open and chat with. Agents can use Codex, Pi, Devin, Claude Code, OpenCode, Antigravity or Grok, with different providers and models in the same team.
 
 ## What this changes in practice
 
@@ -52,6 +52,7 @@ See the [README](https://github.com/duongvm57/paseo-slp-plugin#readme) for the f
 - Role changes affect future launches, not sessions that are already running.
 - The plugin refuses to overwrite a provider or profile it does not own, and it stops with `RECOVERY_REQUIRED` when the configuration changed outside its journal.
 - Role rules guide agents. Repository and shell permissions still come from Paseo and the provider.
+- Grok uses the official Grok Build CLI over ACP. Sign in with `grok login` or provide `XAI_API_KEY` to the daemon; the wrapper completes noninteractive authentication before session discovery. Models and modes come from Grok's advertised catalog. See [Grok support](../docs/grok.md) for setup and evidence limits.
 - Antigravity supports full access only: its CLI automatically approves tools, subject to native policy denial. Thinking effort is part of the model ID. Its MCP integration supports stdio and Streamable HTTP; legacy SSE and explicit tool-policy preapproval are unsupported. Inherited native MCP services remain available; session routing does not sandbox tools. See [Antigravity support](https://github.com/duongvm57/paseo-slp-plugin/blob/main/docs/antigravity.md) for resume restrictions and evidence limits.
 
 ## Data, filesystem, subprocess and network access

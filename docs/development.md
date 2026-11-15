@@ -152,6 +152,7 @@ Which test covers which area, from what each file imports:
 | `plugin/server/manager.ts`, `config-transaction.ts`, `state-store.ts`, `materializer.ts`, `launchers.ts`, `executables.ts` | `plugin-transaction`, `plugin-recovery`, `plugin-routing`, `plugin-materializer`, `plugin-launchers`, `plugin-families`, `plugin-helpers`, `plugin-provider-catalog`, `plugin-entrypoints`, `runtime-layout` |
 | `plugin/server/jev.ts`, `plugin/server/runtime/cli/jev*.ts`, `routing.ts` | `plugin-jev`, `jev`, `routing`, `routing-criteria`, `runtime-state` |
 | `plugin/server/antigravity/*` | `plugin-antigravity`, `plugin-antigravity-mcp` |
+| `bin/grok-role.mjs`, `runtime/cli/grok-acp.ts` | `grok` |
 | `plugin/server/delivered-input.ts` | `plugin-delivered-input`, `plugin-desk-delivery` |
 | `plugin/server/supervision/*`, `plugin/shared/supervision.ts` | `plugin-supervision`, `plugin-supervision-capture`, `-card`, `-delivery`, `-observer` |
 | `plugin/client/*` (cards, catalog demand, workflow panel, manager state) | `client-catalog-demand`, `client-target-async`, `client-workflow-view`, `plugin-ui`; hooks load through `tests/helpers/*-entry.mts` |
@@ -190,7 +191,7 @@ capabilities. Installed dependency checks and extracted-target typechecks are
 reported separately.
 
 Roles are behavioral instructions, not a filesystem/MCP sandbox. Local
-transport checks cover Codex, Pi, Devin, Claude, OpenCode and Antigravity; fixture success
+transport checks cover Codex, Pi, Devin, Claude, OpenCode, Antigravity and Grok; fixture success
 does not establish live provider switching, heartbeat, council, compaction or
 full-manifest acceptance. Historical smoke evidence remains specific to its
 candidate and host; local `.local-checks/` artifacts are not distributed

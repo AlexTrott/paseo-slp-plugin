@@ -28,8 +28,8 @@ Làm gì:
    `/acceptance`.
 3. `slp.mjs install --paseo-home --apply` (integrated install thật), `verify`,
    `identity`, `instructions` cho cả 3 role, `uninstall` dry-run.
-4. `lib/checks.mjs` — các invariant: 15 provider `slp-*` (transport map
-   codex/pi/`devin→acp`/claude/`opencode→acp`), peer `paseoTools.disabledTools`, 2 saved
+4. `lib/checks.mjs` — các invariant: 18 provider `slp-*` (transport map
+   codex/pi/`devin→acp`/claude/`opencode→acp`/`grok→acp`), peer `paseoTools.disabledTools`, 2 saved
    profile, mcp flags bật, fixture config/file human-owned giữ nguyên,
    `installed.json` + `paseo-binding.json` receipts đúng.
 5. `lib/plugin-load.mjs` — kiểm tra adapter bằng server stub (không chứng minh

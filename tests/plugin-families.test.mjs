@@ -14,19 +14,27 @@ import {
   FAMILY_IDS,
   FAMILY_LABEL,
   FAMILY_PICKER_ORDER,
+  GRANT_FAMILY_IDS,
   HOOK_FAMILY_IDS,
   HOOK_PROVIDER_ID_RE,
   MANAGED_FAMILY_PREFIX_RE,
   OWNED_PROVIDER_ID_RE,
   OWNED_PROVIDER_IDS,
+  PRE_GROK_FAMILY_IDS,
+  PRE_GROK_PROVIDER_IDS,
   PROVIDER_EXTENDS,
   PROVIDER_EXTENDS_IDS,
   ROLES,
+  STANDALONE_FAMILY_IDS,
+  STANDALONE_PROVIDER_IDS,
   WRAPPER_FAMILY_IDS,
   WRAPPER_PROVIDER_ID_RE,
   familyFromProviderId,
   ownedProviderId,
+  persistedFamilyIds,
+  persistedProviderIds,
 } from '../plugin/shared/runtime/families.ts';
+import { verifyProvider } from '../plugin/server/runtime/cli/binding.ts';
 import { Family, ProviderId } from '../plugin/shared/contracts.ts';
 import { FAMILIES as LAUNCHER_FAMILIES, GATE_FAMILIES, ROLES as LAUNCHER_ROLES } from '../plugin/server/launchers.ts';
 import { FAMILIES as RESOLVER_FAMILIES } from '../plugin/server/executables.ts';
@@ -34,10 +42,10 @@ import { FAMILIES as VIEW_FAMILIES, OWNED_PROVIDER_IDS as VIEW_OWNED, PROVIDER_E
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
-test('the registry declares the six current families on two transports', () => {
-  assert.deepEqual(FAMILY_IDS, ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity']);
+test('the registry declares the seven current families on two transports', () => {
+  assert.deepEqual(FAMILY_IDS, ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity', 'grok']);
   assert.deepEqual(HOOK_FAMILY_IDS, ['codex', 'pi', 'claude', 'antigravity']);
-  assert.deepEqual(WRAPPER_FAMILY_IDS, ['devin', 'opencode']);
+  assert.deepEqual(WRAPPER_FAMILY_IDS, ['devin', 'opencode', 'grok']);
   // The registry is pure — no imports at all, so the client bundle can
   // never pull a server-only or node module through it.
   const source = readFileSync(join(root, 'plugin/shared/runtime/families.ts'), 'utf8');
@@ -60,9 +68,9 @@ test('every slp-<family>-<role> id classifies correctly by transport', () => {
 });
 
 test('OWNED_PROVIDER_IDS is exactly the family × role cartesian product', () => {
-  assert.equal(OWNED_PROVIDER_IDS.length, 18);
+  assert.equal(OWNED_PROVIDER_IDS.length, 21);
   assert.equal(OWNED_PROVIDER_IDS.length, FAMILY_IDS.length * ROLES.length);
-  assert.equal(new Set(OWNED_PROVIDER_IDS).size, 18);
+  assert.equal(new Set(OWNED_PROVIDER_IDS).size, 21);
   assert.deepEqual(
     [...OWNED_PROVIDER_IDS].sort(),
     FAMILY_IDS.flatMap(family => ROLES.map(role => `slp-${family}-${role}`)).sort(),
@@ -139,4 +147,28 @@ test('wire schemas derive their domains from the registry', () => {
   }
   assert.equal(ProviderId.safeParse('slp-gpt-lead').success, false);
   assert.equal(ProviderId.safeParse('slp-codex-admin').success, false);
+});
+
+test('Grok uses a granted ACP wrapper and requires explicit ACP inventory', () => {
+  assert.ok(GRANT_FAMILY_IDS.includes('grok'));
+  assert.equal(PROVIDER_EXTENDS.grok, 'acp');
+  assert.equal(FAMILY_BIN_ENV.grok, 'SLP_GROK_BIN');
+  const provider = { id: 'slp-grok-peer', enabled: true, extends: 'acp' };
+  assert.equal(verifyProvider([provider], provider.id, familyFromProviderId).family, 'grok');
+  for (const transport of [undefined, 'grok', 'codex']) {
+    const invalid = { ...provider, extends: transport };
+    if (transport === undefined) delete invalid.extends;
+    assert.throws(() => verifyProvider([invalid], provider.id, familyFromProviderId), /does not match.*grok.*acp/);
+  }
+});
+
+test('standalone families are complete but never admitted as managed historical vocabularies', () => {
+  assert.deepEqual(STANDALONE_FAMILY_IDS, ['codex', 'pi', 'devin', 'claude', 'opencode', 'grok']);
+  assert.equal(STANDALONE_PROVIDER_IDS.length, 18);
+  assert.equal(persistedFamilyIds(STANDALONE_FAMILY_IDS), null);
+  assert.equal(persistedProviderIds(STANDALONE_PROVIDER_IDS), null);
+  assert.equal(persistedFamilyIds(PRE_GROK_FAMILY_IDS), PRE_GROK_FAMILY_IDS);
+  assert.equal(persistedProviderIds(PRE_GROK_PROVIDER_IDS), PRE_GROK_PROVIDER_IDS);
+  assert.equal(PRE_GROK_PROVIDER_IDS.some(id => id.startsWith('slp-grok-')), false);
+  assert.equal(persistedFamilyIds([...PRE_GROK_FAMILY_IDS, 'grok', 'grok']), null);
 });
