@@ -390,6 +390,7 @@ const HANDBACK_SHAPES: Record<FamilyId, string> = {
   codex: "codex-message-v1", claude: "claude-message-v1", devin: "devin-acp-message-v1", pi: "pi-message-v1",
   opencode: "opencode-unverified",
   antigravity: "antigravity-unverified",
+  grok: "grok-unverified",
 };
 
 const unverifiedMessage = (reason: string): Evidence<CapturedMessage> => ({ state: "unverified", reason });
@@ -606,6 +607,7 @@ const SEND_ADAPTERS: Record<FamilyId, SendAdapter> = {
   // Registry membership/role delivery does not verify timeline shapes.
   opencode: { coverage: { state: "unverified", reason: VISIBILITY.sendCoverageUnverified }, parse: () => null },
   antigravity: { coverage: { state: "unverified", reason: VISIBILITY.sendCoverageUnverified }, parse: () => null },
+  grok: { coverage: { state: "unverified", reason: VISIBILITY.sendCoverageUnverified }, parse: () => null },
 };
 
 /** Send coverage for a provider named by a verified host record; null or a

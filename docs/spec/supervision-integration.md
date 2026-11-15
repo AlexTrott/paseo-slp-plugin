@@ -61,7 +61,7 @@ No observer code lives in the immutable `bin/`/`src/` runtime payload.
 The observed provider envelopes and their provenance live with the
 [supervision fixtures](../../tests/fixtures/supervision/README.md).
 Only observed normalized shapes open a transmission lane; derived examples
-are not positive evidence. Devin send outcomes and OpenCode/Antigravity capture remain
+are not positive evidence. Devin send outcomes and OpenCode/Antigravity/Grok capture remain
 unknown where no emitted result/verified shape exists. The detector never
 reads assignment pointer files or infers report-recipient authority.
 

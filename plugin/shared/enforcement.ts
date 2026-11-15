@@ -107,11 +107,11 @@ export const WIRE_LIMITS = {
    *  row + the P2-d `invoke-plugin-rpc-mcp` operator-transport gap +
    *  4 probe gaps per family. */
   gaps: 2 + 4 * FAMILY_IDS.length,
-  /** P2-e membership projection — the cap is the largest of {64, 32, 16}
-   *  whose worst-case enforcement-status output stays under MAX_RPC_BYTES
-   *  (measured by the capacity fixture, §4.4); rows beyond it shed
-   *  oldest-first into `row-limit`. */
-  bindings: 16,
+  /** Membership projection — the largest whole-number cap whose measured
+   *  worst-case seven-family status output stays under MAX_RPC_BYTES.
+   *  Rows beyond it shed oldest-first into `row-limit`; durable memberships
+   *  are unchanged. See 2026-11-15-grok-enforcement-capacity.md. */
+  bindings: 13,
   /** Repo-ledger scan bound for the bindings projection — an interactive
    *  call, each ledger up to LEDGER_LIMITS.ledgerBytes; 16 caps the
    *  worst-case read cost. Repos beyond the cap are source-incomplete. */

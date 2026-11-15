@@ -25,7 +25,7 @@ export interface FamilySpec {
    *              overlays the grant (codex/pi/claude).
    *  "wrapper" — shim + role wrapper; the ACP adapter drops systemPrompt, so
    *              the role bytes travel through the wrapper's session/prompt rewrite
-   *              (devin/opencode). */
+   *              (devin/opencode/grok). */
   transport: "hook" | "wrapper";
   /** Provider-env variable that carries the frozen binary resolution —
    *  `SLP_<ID>_BIN`; the shim's per-family source and the provider env block. */
@@ -52,6 +52,7 @@ export const FAMILIES = [
   { id: "claude", label: "Claude Code", transport: "hook", binEnv: "SLP_CLAUDE_BIN", extends: "claude", pickerRank: 0 },
   { id: "opencode", label: "OpenCode", transport: "wrapper", binEnv: "SLP_OPENCODE_BIN", extends: "acp", sessionGrant: true, pickerRank: 4 },
   { id: "antigravity", label: "Antigravity", transport: "hook", binEnv: "SLP_ANTIGRAVITY_BIN", binary: "agy", extends: "antigravity", registered: true, pickerRank: 5 },
+  { id: "grok", label: "Grok", transport: "wrapper", binEnv: "SLP_GROK_BIN", extends: "acp", sessionGrant: true, pickerRank: 6 },
 ] as const satisfies readonly FamilySpec[];
 
 export type FamilyId = (typeof FAMILIES)[number]["id"];
@@ -93,8 +94,11 @@ export const familyUsesRegistration = (family: FamilyId): boolean => {
   const spec = FAMILIES.find(f => f.id === family)!;
   return "registered" in spec && spec.registered;
 };
+/** Families the offline installer can launch without native plugin registrations. */
+export const STANDALONE_FAMILY_IDS: readonly FamilyId[] =
+  FAMILY_IDS.filter(family => !familyUsesRegistration(family));
 /** Deduped `extends` values, registry order — the OwnedProvider.extends enum
- *  domain (Devin/OpenCode contribute "acp"; hook families extend their own id). */
+ *  domain (Devin/OpenCode/Grok contribute "acp"; hook families extend their own id). */
 export const PROVIDER_EXTENDS_IDS: readonly ProviderExtends[] = [
   ...new Set(FAMILIES.map(f => f.extends)),
 ];
@@ -114,12 +118,21 @@ export const ownedProviderId = (family: FamilyId, role: RoleName): string =>
 export const OWNED_PROVIDER_IDS: string[] = FAMILY_IDS.flatMap(family =>
   ROLES.map(role => ownedProviderId(family, role)),
 ).sort();
+/** The standalone install domain differs from managed journal history: it
+ *  excludes registered native families, while including later ACP families. */
+export const STANDALONE_PROVIDER_IDS: string[] = STANDALONE_FAMILY_IDS.flatMap(family =>
+  ROLES.map(role => ownedProviderId(family, role)),
+).sort();
 
-// Persisted history has exactly three admitted vocabularies. These frozen
+// Managed persisted history has exactly four admitted vocabularies. These frozen
 // historical domains are intentionally independent of the current registry;
 // adding a future family does not authorize another history format.
 export const LEGACY_FAMILY_IDS = ['codex', 'pi', 'devin', 'claude'] as const;
 export const PRE_ANTIGRAVITY_FAMILY_IDS = ['codex', 'pi', 'devin', 'claude', 'opencode'] as const;
+export const PRE_GROK_FAMILY_IDS = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity'] as const;
+export const PRE_GROK_PROVIDER_IDS = PRE_GROK_FAMILY_IDS.flatMap(family =>
+  ROLES.map(role => ownedProviderId(family, role)),
+).sort();
 export const PRE_ANTIGRAVITY_PROVIDER_IDS = PRE_ANTIGRAVITY_FAMILY_IDS.flatMap(family =>
   ROLES.map(role => ownedProviderId(family, role)),
 ).sort();
@@ -131,12 +144,14 @@ const exactSet = (keys: readonly string[], expected: readonly string[]) =>
     && expected.every(key => keys.includes(key));
 export function persistedFamilyIds(keys: readonly string[]): readonly FamilyId[] | null {
   if (exactSet(keys, FAMILY_IDS)) return FAMILY_IDS;
+  if (exactSet(keys, PRE_GROK_FAMILY_IDS)) return PRE_GROK_FAMILY_IDS;
   if (exactSet(keys, PRE_ANTIGRAVITY_FAMILY_IDS)) return PRE_ANTIGRAVITY_FAMILY_IDS;
   if (exactSet(keys, LEGACY_FAMILY_IDS)) return LEGACY_FAMILY_IDS;
   return null;
 }
 export function persistedProviderIds(keys: readonly string[]): readonly string[] | null {
   if (exactSet(keys, OWNED_PROVIDER_IDS)) return OWNED_PROVIDER_IDS;
+  if (exactSet(keys, PRE_GROK_PROVIDER_IDS)) return PRE_GROK_PROVIDER_IDS;
   if (exactSet(keys, PRE_ANTIGRAVITY_PROVIDER_IDS)) return PRE_ANTIGRAVITY_PROVIDER_IDS;
   if (exactSet(keys, LEGACY_OWNED_PROVIDER_IDS)) return LEGACY_OWNED_PROVIDER_IDS;
   return null;

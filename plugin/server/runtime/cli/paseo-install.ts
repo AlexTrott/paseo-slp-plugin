@@ -26,7 +26,7 @@ import { homedir } from 'node:os';
 import { isDeepStrictEqual } from 'node:util';
 import { json, readJson, hash, identity, install, verifyInstall, files, stageInstall, swapIn, verifyReplaceable } from './package.ts';
 import { roles, profileRoles, families, profileId, providerId, peerPaseoToolsPolicy } from './profiles.ts';
-import { familyUsesRegistration, STANDALONE_PROVIDER_EXTENDS, persistedProviderIds, familyFromProviderId, type FamilyId } from '../../../shared/runtime/families.ts';
+import { familyUsesRegistration, STANDALONE_PROVIDER_EXTENDS, STANDALONE_PROVIDER_IDS, persistedProviderIds, familyFromProviderId, type FamilyId } from '../../../shared/runtime/families.ts';
 import { validateCatalog, routingPath, probeUserPool, catalogPoolDrift } from './routing.ts';
 import { configFile, writeConfig, mcpFlags, requireMcp, verifyOwnedProviders, verifyOwnedProfiles,
   providers as hostProviders, agentProfiles as hostAgentProfiles } from './host-config.ts';
@@ -50,7 +50,12 @@ function readPaseoBinding(destination: string): PaseoBinding {
   const historicalProfiles = value.profiles;
   const codexIds = roles.map(role => providerId(role, 'codex'));
   const codex3 = providerKeys.length === 3 && codexIds.every(id => Object.hasOwn(value.providers as object, id));
-  if (persistedProviderIds(providerKeys) === null && !codex3) throw new Error('Invalid standalone binding: exact Codex3, legacy12, legacy15 or current18 provider domain required; preserve installation');
+  // Native registrations are omitted by configurationPlan. Its complete
+  // standalone domain (now including Grok but not Antigravity) must not widen
+  // the managed journal's exact historical family vocabularies.
+  const standalone = providerKeys.length === STANDALONE_PROVIDER_IDS.length
+    && STANDALONE_PROVIDER_IDS.every(id => Object.hasOwn(value.providers as object, id));
+  if (persistedProviderIds(providerKeys) === null && !codex3 && !standalone) throw new Error('Invalid standalone binding: exact Codex3, legacy12/15/18, current21 or standalone18 provider domain required; preserve installation');
   if (codex3 && (historicalProfiles.length !== 3 || new Set(historicalProfiles.map(p => record(p) ? p.id : null)).size !== 3
     || !roles.every(role => historicalProfiles.some(p => record(p) && p.id === profileId(role) && p.provider === providerId(role, 'codex'))))) {
     throw new Error('Invalid standalone Codex3 profiles: exact historical supervisor/lead/peer rows required; preserve installation');

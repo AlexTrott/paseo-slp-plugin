@@ -31,8 +31,9 @@ const RUNTIME_CONTROL_ENV_KEYS = [
 // NODE_OPTIONS is cleared as well: it would inject flags into the frozen
 // helper Node commands rendered through SLP_NODE_BIN.
 const STRIPPED_ENV_KEYS = [...RUNTIME_CONTROL_ENV_KEYS, 'NODE_OPTIONS'];
-const FAMILIES = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity'];
+const FAMILIES = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity', 'grok'];
 const ROLES = ['supervisor', 'lead', 'peer'];
+const GRANT_WRAPPERS = new Map([['opencode', 'OpenCode'], ['grok', 'Grok']]);
 
 
 const fail = message => {
@@ -85,6 +86,7 @@ async function verifyCandidate(manifest) {
 function runVersionProbe(binaryPath) {
   const env = { ...process.env };
   for (const key of STRIPPED_ENV_KEYS) delete env[key];
+  delete env.SLP_SESSION_OPEN_GRANT;
   const child = spawn(binaryPath, ['--version'], { stdio: 'inherit', env });
   child.on('error', error => fail(`cannot exec ${binaryPath}: ${error.message}`));
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => child.kill(signal));
@@ -97,13 +99,13 @@ function runVersionProbe(binaryPath) {
 // the existing family wrapper with process.argv = [node, wrapper, role, args].
 // Its interception, passthrough, stdio, signal and exit-code behavior is
 // unchanged. PASEO_AGENT_ID passes through as context only — it never selects
-// a binding, and only OpenCode retains a session-open grant until its wrapper consumes
-// and strips it; the other wrapper paths reset the sentinel.
+// a binding. Grant-bearing ACP wrappers retain the session-open grant until
+// their wrapper consumes and strips it; the other paths reset the sentinel.
 async function enterWrapper(manifest, family, role, nativeArgs) {
   for (const key of STRIPPED_ENV_KEYS) delete process.env[key];
-  if (family !== 'opencode') process.env.SLP_SESSION_OPEN_GRANT = '';
-  if (family === 'opencode' && process.env.PASEO_AGENT_ID && !process.env.SLP_SESSION_OPEN_GRANT) {
-    throw new Error('managed OpenCode session launched without live SLP hook grant');
+  if (!GRANT_WRAPPERS.has(family)) process.env.SLP_SESSION_OPEN_GRANT = '';
+  if (GRANT_WRAPPERS.has(family) && process.env.PASEO_AGENT_ID && !process.env.SLP_SESSION_OPEN_GRANT) {
+    throw new Error(`managed ${GRANT_WRAPPERS.get(family)} session launched without live SLP hook grant`);
   }
   process.env[`SLP_${family.toUpperCase()}_BIN`] = manifest.binaries[family].path;
   process.env.SLP_RUNTIME_ROOT = manifest.candidate.path;

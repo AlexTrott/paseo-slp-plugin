@@ -392,6 +392,15 @@ export interface FamilyFacts {
 // a registry family landing ahead of its curation must not crash the audit —
 // auditCapabilities fails closed with a typed gap per fact-dependent row.
 const FAMILY_FACTS: Partial<Record<FamilyId, FamilyFacts>> = {
+  grok: {
+    exactPreapproval: false,
+    contractRef: "@getpaseo/server@0.15.2:packages/server/src/server/agent/provider-registry.ts#PROVIDER_CONTRACTS.acp",
+    mcpLaunchRef: "@getpaseo/server@0.15.2:packages/server/src/server/agent/providers/acp-agent.ts#acpMcpServers",
+    mcpLaunchEvidence: "generic ACP sends stdio command/args/env when Grok advertises MCP; authentication precedes session/new",
+    resumeRef: "@getpaseo/server@0.15.2:packages/server/src/server/agent/providers/acp-agent.ts#resumeSession",
+    resumeEvidence: "generic ACP resends cwd+mcpServers on load/resume; the wrapper rearms role entry delivery",
+    resumeLimitation: "Grok capabilities gate MCP/resume; live child delivery, exact preapproval and model compliance remain unproven",
+  },
   antigravity: {
     exactPreapproval: false,
     mcpStdio: true,

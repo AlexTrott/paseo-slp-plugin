@@ -87,7 +87,7 @@ The design rationale is in [docs/architecture.md](docs/architecture.md).
 
 | It does                                                                                     | It refuses                                                                        | It never                                                         |
 | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Registers up to 15 `slp-<family>-<role>` providers and the **SLP Supervisor** / **SLP Lead** profiles | To overwrite a provider or profile it does not own (`COLLISION`)             | Creates an agent on install or activation                        |
+| Registers up to 21 `slp-<family>-<role>` providers and the **SLP Supervisor** / **SLP Lead** profiles | To overwrite a provider or profile it does not own (`COLLISION`)             | Creates an agent on install or activation                        |
 | Loads each seat's role instructions at session entry, separate from the task prompt         | To guess when the config drifted outside its journal (`RECOVERY_REQUIRED`)        | Runs a scheduler or agent database; Paseo stays the control plane |
 | Keeps a Peer pool that the Lead picks each Peer's runtime from                               | A Peer binding outside the pool during `prepare`                                 | Writes your repository's routing catalog                          |
 | Validates launch arguments offline (`prepare`), with named failures                          | Unverified or incompatible provider inventory supplied to `prepare`              | Runs a monitoring daemon; `monitor` is a scan you invoke          |
@@ -96,7 +96,7 @@ The design rationale is in [docs/architecture.md](docs/architecture.md).
 | Supports planned owner handoff and a read-only workspace work panel                         | An acknowledgment that does not match a usable offer and current revision pins  | Transfers authority through a chat message or a resource account  |
 | Offers opt-in Jev routing and communication supervision                                    | A Jev routing receipt that fails offline verification (hash, model, catalog)     | Enables external services without your configuration              |
 
-Saved role choices narrow the Supervisor/Lead providers; all six Peer providers remain
+Saved role choices narrow the Supervisor/Lead providers; all seven Peer providers remain
 pool-driven. Provider entries for unavailable CLIs are disabled. Pool checks apply to
 `prepare` and native task dispatch. Role rules guide agents, while managed launch and desk checks cover their own
 interfaces; repository and shell permissions still come from Paseo and the provider.
@@ -110,9 +110,11 @@ interfaces; repository and shell permissions still come from Paseo and the provi
 | **Lead**       | Framing, routing, dependencies, integration, the project verdict                       | Pre-solves hard work and hands Peers a typing job        | The **SLP Lead** profile                |
 | **Peer**       | One bounded outcome, as an Engineer, Architect, Reviewer or Scout                      | Spawns other agents                                     | An option in the Peer pool, per task    |
 
-Seats run on **Codex, Pi, Devin, Claude Code, OpenCode or Antigravity**, mixed freely: two Peers in the same team can use
+Seats run on **Codex, Pi, Devin, Claude Code, OpenCode, Antigravity or Grok**, mixed freely: two Peers in the same team can use
 different providers, models and effort levels. [OpenCode](docs/opencode.md) uses ACP stdio for
 managed and standalone seats; native OpenCode and V1 are unsupported.
+[Grok](docs/grok.md) uses the official Grok Build CLI over ACP, with an existing
+`grok login` or `XAI_API_KEY` available to the daemon.
 [Antigravity](docs/antigravity.md) requires agy 1.4.4 or newer and the manager
 plugin; it supports full access, with thinking effort selected through the model ID.
 
@@ -127,9 +129,9 @@ You need:
 - Paseo daemon **and app** `>=0.11.0` (minimum supported host; the SDK version this checkout builds against is pinned in `package.json`) for native screen/sidebar UI, with `pluginsEnabled: true` and an effective `mcp.enabled: true`
 - a POSIX daemon host (Linux/macOS), with Node.js 22.x from 22.18, or Node.js 23.6+
   (native TypeScript stripping)
-- the CLI of each provider family you use (Codex, Pi, Devin, Claude, OpenCode, Antigravity), signed in on the daemon host;
+- the CLI of each provider family you use (Codex, Pi, Devin, Claude, OpenCode, Antigravity, Grok), signed in on the daemon host;
   Pi needs repeatable `--append-system-prompt` support
-- Antigravity needs agy 1.4.4 or newer; standalone CLI installation retains the other five families
+- Antigravity needs agy 1.4.4 or newer; standalone CLI installation retains the other six families
 
 Any one supported provider CLI is sufficient; Codex is optional. SLP discovers available CLIs before activation.
 

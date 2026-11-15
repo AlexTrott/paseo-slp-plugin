@@ -12,6 +12,7 @@ import { roleInstructions, roleBundle, roleDelivery } from '../plugin/server/run
 
 import { piRoleArgs, acpRolePrompt, claudeRolePrompt } from '../plugin/server/runtime/cli/role-transport.ts';
 import { readCatalog, emptyCatalog, validateCatalog } from '../plugin/server/runtime/cli/routing.ts';
+import { STANDALONE_PROVIDER_IDS } from '../plugin/shared/runtime/families.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 function fixture(t) {
@@ -231,7 +232,7 @@ test('installer registers both role transports and preserves user provider switc
   installPaseo(root, installed, home, true);
   const path = join(home, 'config.json');
   const config = readJson(path);
-  assert.equal(Object.keys(config.agents.providers).length, 15);
+  assert.equal(Object.keys(config.agents.providers).length, STANDALONE_PROVIDER_IDS.length);
   assert.equal(config.daemon.agentProfiles.length, 2);
   assert.equal(config.agents.providers['slp-pi-peer'].extends, 'pi');
   assert.equal(config.agents.providers['slp-pi-lead'].command[1], join(installed, 'bin/pi-role.mjs'));
