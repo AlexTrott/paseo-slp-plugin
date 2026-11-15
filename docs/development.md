@@ -185,7 +185,7 @@ both boundaries are visible. Missing turn IDs, truncated history, timeout or
 archive during the read leave the observation unverified. This adapter does
 not establish live supervision or Desk delivery acceptance.
 
-Native task adapters compile against the pinned SDK 0.14.0 declarations;
+Native task adapters compile against the pinned SDK 0.15.4 declarations;
 installation compatibility with an older daemon does not establish its execution
 capabilities. Installed dependency checks and extracted-target typechecks are
 reported separately.
@@ -214,7 +214,7 @@ claims need a deliberately exercised fault boundary and native timeline.
 
 ### Container install/load checks
 
-`./tests/container/run` builds a disposable image pinned to Paseo 0.15.2 and
+`./tests/container/run` builds a disposable image pinned to Paseo 0.15.4 and
 exercises installation, retained runtime loading and contributor registration.
 It needs Docker and outbound network. [Container instructions](../tests/container/README.vi.md)
 separate fake-home install/load checks from a real disposable daemon serve.
