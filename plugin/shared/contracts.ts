@@ -11,7 +11,7 @@ import { z } from "zod";
 import { defineRpc } from "@getpaseo/plugin";
 import { JEV_TRANSPORTS } from "./runtime/jev-transport.ts";
 import { swe2ModelPattern } from "./runtime/model-constraints.ts";
-import { FAMILY_IDS, OWNED_PROVIDER_ID_RE, PROVIDER_EXTENDS_IDS, ROLES, persistedProviderIds, persistedFamilyIds, familyFromProviderId, familyUsesRegistration } from "./runtime/families.ts";
+import { FAMILY_IDS, OWNED_PROVIDER_ID_RE, PROVIDER_EXTENDS_IDS, ROLES, persistedProviderIds, persistedFamilyIds, familyFromProviderId, familyUsesRegistration, providerIdsForFamilies, samePersistedIds } from "./runtime/families.ts";
 
 /** The serialized-RPC byte contract: every request and response envelope
  *  stays inside this many UTF-8 bytes. Defined once here — producers bound
@@ -660,7 +660,7 @@ export const Projection = z.object({
   injectIntoAgents: Presence(z.boolean()),
 }).strict().superRefine((projection, ctx) => {
   if (persistedProviderIds(Object.keys(projection.providers)) === null) {
-    ctx.addIssue({ code: "custom", path: ["providers"], message: "projection requires exact legacy12, legacy15 or current18 provider keys" });
+    ctx.addIssue({ code: "custom", path: ["providers"], message: "projection requires exact legacy12, legacy15, pre-grok18, standalone18 or current21 provider keys" });
   }
   for (const [id, presence] of Object.entries(projection.providers)) {
     if (!presence.present) continue;
@@ -694,14 +694,14 @@ export const Binding = z.object({
   launchSetSha256: Sha,
   launchManifestSha256: Sha,
   // Legacy bindings retain their exact launcher sets; current bindings
-  // record eighteen launchers: twelve gates and six ACP shims.
+  // record twenty-one launchers: twelve gates and nine ACP shims.
   // The launch manifest's launcherFamilies/gateFamilies fields
   // carry the per-file kind.
   launcherFiles: z.array(LauncherFile).min(1),
   node: z.object({ path: AbsolutePath, version: z.string().min(1) }).strict(),
   // No defaults: absence belongs to the historical domain and must stay
   // absent when old fields and their digests are verified.
-  binaries: z.object({ ...familyKeyed(Binary), opencode: Binary.optional(), antigravity: Binary.optional() }).strict(),
+  binaries: z.object({ ...familyKeyed(Binary), opencode: Binary.optional(), antigravity: Binary.optional(), grok: Binary.optional() }).strict(),
   baseline: z.enum(["fresh", "adopted-observed"]),
   beforeActivation: Snapshot,
   mcpBefore: z.object({ enabled: FlagBefore, injectIntoAgents: FlagBefore }).strict(),
@@ -712,10 +712,12 @@ export const Binding = z.object({
 }).strict().superRefine((binding, ctx) => {
   const families = persistedFamilyIds(Object.keys(binding.binaries));
   const ids = persistedProviderIds(Object.keys(binding.owned.providers));
-  if (families === null || ids === null || ids.length !== families.length * ROLES.length) {
-    ctx.addIssue({ code: "custom", path: ["binaries"], message: "binding binary/owned domains must both be exact legacy4/12, legacy5/15 or current6/18" });
+  const expected = families === null ? null : providerIdsForFamilies(families);
+  if (!samePersistedIds(ids, expected)) {
+    ctx.addIssue({ code: "custom", path: ["binaries"], message: "binding binary/owned domains must both be exact legacy4/12, legacy5/15, legacy6/18 or current7/21" });
   }
-  if (ids !== null && Object.keys(binding.beforeActivation.owned.providers).length > ids.length) {
+  const beforeIds = persistedProviderIds(Object.keys(binding.beforeActivation.owned.providers));
+  if (ids !== null && (beforeIds === null || beforeIds.length > ids.length || (beforeIds.length === ids.length && !samePersistedIds(beforeIds, ids)))) {
     ctx.addIssue({ code: "custom", path: ["beforeActivation"], message: "a historical binding cannot have a newer baseline vocabulary" });
   }
   const names = binding.launcherFiles.map(file => file.path.split(/[\\/]/).at(-1)!);
@@ -735,12 +737,16 @@ export const Plan = z.object({
   nextBinding: Binding.nullable(),
   restoreInjectionTo: z.boolean().nullable(),
 }).strict().superRefine((plan, ctx) => {
-  if (Object.keys(plan.before.owned.providers).length !== Object.keys(plan.afterOwned.providers).length) {
-    ctx.addIssue({ code: "custom", path: ["afterOwned"], message: "plan endpoints require one exact legacy12, legacy15 or current18 domain" });
+  const before = persistedProviderIds(Object.keys(plan.before.owned.providers));
+  const after = persistedProviderIds(Object.keys(plan.afterOwned.providers));
+  if (!samePersistedIds(before, after)) {
+    ctx.addIssue({ code: "custom", path: ["afterOwned"], message: "plan endpoints require one exact legacy12, legacy15, pre-grok18, standalone18 or current21 domain" });
   }
-  const size = Object.keys(plan.afterOwned.providers).length;
-  if ((plan.nextBinding !== null && Object.keys(plan.nextBinding.owned.providers).length !== size)
-    || (plan.previousBinding !== null && Object.keys(plan.previousBinding.owned.providers).length > size)) {
+  const next = plan.nextBinding === null ? null : persistedProviderIds(Object.keys(plan.nextBinding.owned.providers));
+  const previous = plan.previousBinding === null ? null : persistedProviderIds(Object.keys(plan.previousBinding.owned.providers));
+  if ((plan.nextBinding !== null && !samePersistedIds(next, after))
+    || (plan.previousBinding !== null && (previous === null || after === null || previous.length > after.length
+      || (previous.length === after.length && !samePersistedIds(previous, after))))) {
     ctx.addIssue({ code: "custom", path: ["nextBinding"], message: "plan binding vocabularies must match the intended endpoint and cannot reverse history" });
   }
 });

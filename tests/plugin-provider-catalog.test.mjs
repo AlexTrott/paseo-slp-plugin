@@ -100,6 +100,30 @@ for (const path of ['snapshot', 'legacy', 'loading']) {
   });
 }
 
+test('Grok has no model constraint and passes host models and thinking options through', async () => {
+  const loadCatalog = await freshCatalog();
+  const thinkingOptions = [
+    { id: 'xhigh', label: 'Extra high' },
+    { id: 'high', label: 'High' },
+    { id: 'medium', label: 'Medium' },
+    { id: 'low', label: 'Low' },
+  ];
+  const models = [
+    { id: 'grok-4.7', label: 'Grok 4.7', thinkingOptions, defaultThinkingOptionId: 'xhigh' },
+    { id: 'grok-4.7-build-fast', label: 'Grok 4.7 Build Fast' },
+    { id: 'grok-4.6', label: 'Grok 4.6' },
+    { id: 'grok-4.5', label: 'Grok 4.5' },
+  ];
+  const { paseo } = fakePaseo({
+    snapshot: snapshotEntries([{ provider: 'slp-grok-peer', status: 'ready', models, modes: [] }]),
+  });
+  const out = CatalogOutput.parse(await loadCatalog({ schemaVersion: 1, family: 'grok', role: 'peer' }, paseo));
+  assert.equal(Object.hasOwn(out, 'modelConstraint'), false);
+  assert.deepEqual(out.models.map(model => model.id), models.map(model => model.id));
+  assert.deepEqual(out.models[0].thinkingOptions, thinkingOptions);
+  assert.equal(out.models[0].defaultThinkingOptionId, 'xhigh');
+});
+
 test('constraint follows requested family even when the host entry is missing', async () => {
   const loadCatalog = await freshCatalog();
   const { paseo } = fakePaseo({ snapshot: snapshotEntries([]) });
@@ -151,7 +175,7 @@ test('snapshot path: managed-id entry wins, resolvedProvider recorded, models fi
 });
 
 test('picker catalog refreshes each managed provider before reading models after a CLI update', async () => {
-  for (const family of ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity']) {
+  for (const family of ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity', 'grok']) {
     const loadCatalog = await freshCatalog();
     let model = 'old-model';
     const calls = [];

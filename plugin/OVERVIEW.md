@@ -19,7 +19,7 @@ Set up `.paseo-slp/workspace-protocol.md` for minimum sufficient coordination. A
 
 The repository desk preserves assignments, current briefs, decisions, dependencies, review and evidence. Its task queue supports Lead-invoked dispatch and integration, and planned handoff keeps an assignment's history. Open **Read SLP work** to inspect these records in the workspace. The desk distinguishes reported results from measured evidence; final acceptance stays with you.
 
-Each team member is an ordinary Paseo agent you can open and chat with. Agents can use Codex, Pi, Devin, Claude Code, OpenCode or Antigravity, with different providers and models in the same team.
+Each team member is an ordinary Paseo agent you can open and chat with. Agents can use Codex, Pi, Devin, Claude Code, OpenCode, Antigravity or Grok, with different providers and models in the same team.
 
 ## What this changes in practice
 

@@ -55,6 +55,7 @@ and dependency locks are supporting artifacts, not additional runtime owners.
 | bin/devin-role.mjs, plugin/server/runtime/cli/role-transport.ts | Generic ACP adapter; prepend role core, recovery pointer and current managed communication-language state on every session prompt. First prompts and prompts re-armed by load/resume/fork also carry session-entry helpers and the full measured carrier; no compaction event is required. |
 | bin/claude-role.mjs, plugin/server/runtime/cli/role-transport.ts | Claude Agent SDK stream-json adapter; append installed role instructions to the initialize control request's system-prompt append field; all other frames pass through. |
 | bin/opencode-role.mjs, plugin/shared/runtime/opencode-version.mjs | Managed/standalone OpenCode V2 ACP adapter: preserve non-prompt frame bytes; prepend role core on every session prompt and entry helpers/carrier on first/re-armed prompts. Refuse native serve and unsupported versions. Managed opens additionally require a live session-open grant before child spawn. |
+| bin/grok-role.mjs, plugin/shared/runtime/grok-version.mjs | Managed/standalone Grok ACP adapter (`grok agent stdio` only): preserve non-prompt frame bytes; prepend role core on every session prompt and entry helpers/carrier on first/re-armed prompts. Refuse serve, headless, other sessions and versions below 0.2.11. Managed opens require a live session-open grant before child spawn. Models and reasoning effort come from the host catalog. |
 | src/common.md, src/roles/*.md | Authority, role behavior, conditional policy-text reuse and context-recovery rules; no repository tactics or model IDs. |
 | src/delegation.md | Always-loaded Supervisor/Lead delegation core: required review-gate, parentage/placement and ambiguous-create invariants, with distinct managed-desk and ordinary/direct operating pointers. |
 | src/references/delegation-execution.md | Ordinary/Lean formation, preparation, manual host verification and uncertain-create recovery; managed task dispatch uses its own guarded path. |
@@ -193,14 +194,17 @@ once dependent sessions have ended. [Operations](operations.md) owns the full
 activation, reconciliation, removal and migration procedure.
 
 Persisted plugin journals/launch manifests admit exact legacy4/legacy12,
-legacy5/legacy15 and current6/current18 domains. Standalone receipts separately retain the exact
-Codex3 + three-profile format. Antigravity requires manager-owned native
-registrations; standalone generation retains its five independent families.
-Old fields and digests remain unchanged; missing
+legacy5/legacy15, legacy6/legacy18 and current7/current21 domains. Standalone
+receipts separately retain the exact Codex3 + three-profile format, and the
+legacy12, legacy15, standalone18 and current21 provider domains. The pre-Grok
+plugin domain and the standalone-with-Grok domain are both 18 keys and are
+not interchangeable. Antigravity requires manager-owned native
+registrations; standalone generation retains its six independent families,
+including Grok. Old fields and digests remain unchanged; missing
 historical IDs grant no ownership. Native `extends: opencode` observations may
 remain historical evidence, while newly authored OpenCode bindings require ACP.
-Rebinding checks new-slot collisions and never normalizes old history. See
-[OpenCode compatibility](opencode.md).
+Newly authored Grok bindings extend `acp`. Rebinding checks new-slot collisions and never normalizes old history. See
+[OpenCode compatibility](opencode.md) and [Grok support](grok.md).
 
 Host install/upgrade/uninstall and plugin activate/deactivate do not create or
 edit routing catalogs. Only an explicitly chosen `init --routing-from` imports
