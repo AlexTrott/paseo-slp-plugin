@@ -25,7 +25,7 @@ export interface FamilySpec {
    *              overlays the grant (codex/pi/claude).
    *  "wrapper" — shim + role wrapper; the ACP adapter drops systemPrompt, so
    *              the role bytes travel through the wrapper's session/prompt rewrite
-   *              (devin/opencode). */
+   *              (devin/opencode/grok). */
   transport: "hook" | "wrapper";
   /** Provider-env variable that carries the frozen binary resolution —
    *  `SLP_<ID>_BIN`; the shim's per-family source and the provider env block. */
@@ -52,6 +52,7 @@ export const FAMILIES = [
   { id: "claude", label: "Claude Code", transport: "hook", binEnv: "SLP_CLAUDE_BIN", extends: "claude", pickerRank: 0 },
   { id: "opencode", label: "OpenCode", transport: "wrapper", binEnv: "SLP_OPENCODE_BIN", extends: "acp", sessionGrant: true, pickerRank: 4 },
   { id: "antigravity", label: "Antigravity", transport: "hook", binEnv: "SLP_ANTIGRAVITY_BIN", binary: "agy", extends: "antigravity", registered: true, pickerRank: 5 },
+  { id: "grok", label: "Grok", transport: "wrapper", binEnv: "SLP_GROK_BIN", extends: "acp", sessionGrant: true, pickerRank: 6 },
 ] as const satisfies readonly FamilySpec[];
 
 export type FamilyId = (typeof FAMILIES)[number]["id"];
@@ -115,12 +116,26 @@ export const OWNED_PROVIDER_IDS: string[] = FAMILY_IDS.flatMap(family =>
   ROLES.map(role => ownedProviderId(family, role)),
 ).sort();
 
-// Persisted history has exactly three admitted vocabularies. These frozen
-// historical domains are intentionally independent of the current registry;
-// adding a future family does not authorize another history format.
+/** Families the standalone CLI can launch. Registered native providers stay
+ *  on the manager plugin, so this set is not a plugin family vocabulary. */
+export const STANDALONE_FAMILY_IDS: readonly FamilyId[] =
+  FAMILY_IDS.filter(id => !familyUsesRegistration(id));
+export const STANDALONE_PROVIDER_IDS: readonly string[] = STANDALONE_FAMILY_IDS.flatMap(family =>
+  ROLES.map(role => ownedProviderId(family, role)),
+).sort();
+
+// Persisted plugin history has exactly four family vocabularies. The
+// standalone provider set is a fifth provider vocabulary (it includes Grok
+// and omits Antigravity). These frozen domains are intentionally independent
+// of later registry edits; adding a future family does not authorize another
+// history format or a rewrite of retained receipts.
 export const LEGACY_FAMILY_IDS = ['codex', 'pi', 'devin', 'claude'] as const;
 export const PRE_ANTIGRAVITY_FAMILY_IDS = ['codex', 'pi', 'devin', 'claude', 'opencode'] as const;
+export const PRE_GROK_FAMILY_IDS = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity'] as const;
 export const PRE_ANTIGRAVITY_PROVIDER_IDS = PRE_ANTIGRAVITY_FAMILY_IDS.flatMap(family =>
+  ROLES.map(role => ownedProviderId(family, role)),
+).sort();
+export const PRE_GROK_PROVIDER_IDS = PRE_GROK_FAMILY_IDS.flatMap(family =>
   ROLES.map(role => ownedProviderId(family, role)),
 ).sort();
 export const LEGACY_OWNED_PROVIDER_IDS = LEGACY_FAMILY_IDS.flatMap(family =>
@@ -129,14 +144,26 @@ export const LEGACY_OWNED_PROVIDER_IDS = LEGACY_FAMILY_IDS.flatMap(family =>
 const exactSet = (keys: readonly string[], expected: readonly string[]) =>
   keys.length === expected.length && new Set(keys).size === expected.length
     && expected.every(key => keys.includes(key));
+/** Sorted owned ids for one recorded family vocabulary. */
+export function providerIdsForFamilies(families: readonly string[]): string[] {
+  return families.flatMap(family => ROLES.map(role => `slp-${family}-${role}`)).sort();
+}
+/** Canonical persisted id lists are sorted, so equality is index-wise. */
+export function samePersistedIds(left: readonly string[] | null, right: readonly string[] | null): boolean {
+  return left !== null && right !== null && left.length === right.length
+    && left.every((id, index) => id === right[index]);
+}
 export function persistedFamilyIds(keys: readonly string[]): readonly FamilyId[] | null {
   if (exactSet(keys, FAMILY_IDS)) return FAMILY_IDS;
+  if (exactSet(keys, PRE_GROK_FAMILY_IDS)) return PRE_GROK_FAMILY_IDS;
   if (exactSet(keys, PRE_ANTIGRAVITY_FAMILY_IDS)) return PRE_ANTIGRAVITY_FAMILY_IDS;
   if (exactSet(keys, LEGACY_FAMILY_IDS)) return LEGACY_FAMILY_IDS;
   return null;
 }
 export function persistedProviderIds(keys: readonly string[]): readonly string[] | null {
   if (exactSet(keys, OWNED_PROVIDER_IDS)) return OWNED_PROVIDER_IDS;
+  if (exactSet(keys, PRE_GROK_PROVIDER_IDS)) return PRE_GROK_PROVIDER_IDS;
+  if (exactSet(keys, STANDALONE_PROVIDER_IDS)) return STANDALONE_PROVIDER_IDS;
   if (exactSet(keys, PRE_ANTIGRAVITY_PROVIDER_IDS)) return PRE_ANTIGRAVITY_PROVIDER_IDS;
   if (exactSet(keys, LEGACY_OWNED_PROVIDER_IDS)) return LEGACY_OWNED_PROVIDER_IDS;
   return null;

@@ -23,6 +23,7 @@ order are separate contracts.
 | Devin | Shim + ACP wrapper | `acp` | Wrapper verification |
 | OpenCode | Shim + ACP wrapper | `acp` | Required before ACP child start |
 | Antigravity | Create hook + sentinel gate | Registered `slp-antigravity-*` | Required |
+| Grok | Shim + ACP wrapper | `acp` | Required before ACP child start |
 
 Antigravity uses registered native providers and `agy` stream-json. Their
 owned configuration omits `extends`; registrations reject their inert default
@@ -31,7 +32,9 @@ The adapter is maintained in the plugin, using public SDK interfaces.
 See [Antigravity support](../antigravity.md) for MCP and evidence limits.
 
 OpenCode's native transport is unsupported; version and proof limits belong
-to [OpenCode support](../opencode.md). Adding a family requires a registry
+to [OpenCode support](../opencode.md). Grok uses the same ACP wrapper shape
+with `grok agent stdio`. Its version floor, grant handling and catalog limits
+belong to [Grok support](../grok.md). Adding a family requires a registry
 entry, executable recognition, payload bootstrap handling and tests. The shim
 also validates its bootstrap family/role domain before importing TypeScript;
 keep that independent validation current. Persisted-domain expansion requires
@@ -80,7 +83,7 @@ command tail and provider env. `[node, gate]` would probe Node's version;
 an env-dependent launcher would not resolve its binary. Launchers clear
 `NODE_OPTIONS` before Node starts, in addition to child runtime sanitization.
 
-Launch sets publish eighteen files: twelve hook gates and six ACP shim
+Launch sets publish twenty-one files: twelve hook gates and nine ACP shim
 dispatchers. Manifests pin `launcherFamilies` and `gateFamilies` so verification
 reconstructs the correct bytes. Retained manifests without these fields use
 their historical all-shim plan and exact domain.
@@ -125,6 +128,8 @@ the same family still clears features. An unavailable catalog clears dependent
 choices without delayed prefill. Model/mode changes clear feature values.
 Stored prefill does not trigger these user-edit rules or overwrite dirty drafts.
 Antigravity has no independent thinking option: its model ID selects effort.
+Grok advertises standard ACP `thought_level`, so the ordinary thinking picker
+applies and the role form keeps that control.
 The role form omits that control even without a catalog. Rebinding to this
 family clears an inherited `thinkingOptionId` when routing or an explicit
 family preference does not supply one; other omitted profile fields retain

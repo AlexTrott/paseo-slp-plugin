@@ -3,7 +3,7 @@
 // role-routing file at slp-runtime/state/role-routing.json, the
 // get/set-role-routing RPCs, routing-driven provider/profile generation,
 // rebind removal of non-chosen combos, the dependent-reference guard, and
-// the absent/legacy → all-fifteen backward-compatibility decision.
+// the absent/legacy → current owned-provider generation decision.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -47,10 +47,9 @@ const setRouting = (store, home, supervisor, lead) =>
 const getRouting = (store, home) =>
   store.getRoleRouting({ schemaVersion: 1, target: targetOf(home) });
 
-// The six generated ids under a routing: chosen supervisor + chosen lead
-// combos plus all four pool-driven peers — nothing else.
+// Chosen supervisor and lead combos plus every pool-driven peer.
 const generatedIds = (supFamily, leadFamily) =>
-  [`slp-${supFamily}-supervisor`, `slp-${leadFamily}-lead`, 'slp-codex-peer', 'slp-pi-peer', 'slp-devin-peer', 'slp-claude-peer', 'slp-opencode-peer', 'slp-antigravity-peer'].sort();
+  [`slp-${supFamily}-supervisor`, `slp-${leadFamily}-lead`, 'slp-codex-peer', 'slp-pi-peer', 'slp-devin-peer', 'slp-claude-peer', 'slp-opencode-peer', 'slp-antigravity-peer', 'slp-grok-peer'].sort();
 const absentIds = (supFamily, leadFamily) =>
   OWNED_IDS.filter(id => !generatedIds(supFamily, leadFamily).includes(id));
 
@@ -64,7 +63,7 @@ test('role-routing file round-trips through get/set before any activation', asyn
   const store = createStateStore();
   const file = routingPath(home);
 
-  // Unset → null (the legacy all-fifteen generation applies).
+  // Unset → null (absent routing keeps full current generation).
   assert.equal(existsSync(file), false);
   assert.deepEqual(await getRouting(store, home), { schemaVersion: 1, routing: null });
 
@@ -121,10 +120,10 @@ test('set-role-routing rejects malformed input and unknown keys', async t => {
 });
 
 // ---------------------------------------------------------------------------
-// Backward compatibility: absent/legacy routing → v1 all-fifteen generation
+// Backward compatibility: absent/legacy routing → full current generation
 // ---------------------------------------------------------------------------
 
-test('malformed or legacy-version routing file degrades to all-fifteen generation', async t => {
+test('malformed or legacy-version routing file degrades to full current generation', async t => {
   const home = makeHome(t);
   const binaries = makeBinaries(t);
   const daemon = await makeDaemon(t, home);
@@ -140,7 +139,7 @@ test('malformed or legacy-version routing file degrades to all-fifteen generatio
   const act = await manager.activate(activateInput(home, deps.payload, randomUUID()), daemon);
   const done = await waitTerminal(manager, home, act.operation.operationId, daemon);
   assert.equal(done.state, 'ACTIVE');
-  assert.equal(Object.keys(slpProvidersOf(readConfigJson(home))).length, 18, 'legacy routing keeps v1 generation');
+  assert.equal(Object.keys(slpProvidersOf(readConfigJson(home))).length, 21, 'legacy routing keeps v1 generation');
 });
 
 // ---------------------------------------------------------------------------
@@ -197,7 +196,7 @@ test('fresh activation with an explicit Antigravity family override clears routi
   assert.equal(profiles.find(p => p.id === 'slp-supervisor').thinkingOptionId, 'high');
 });
 
-test('routing generates the two chosen combos plus all four peers', async t => {
+test('routing generates the two chosen combos plus all seven peers', async t => {
   const home = makeHome(t);
   const binaries = makeBinaries(t);
   const daemon = await makeDaemon(t, home);
@@ -231,8 +230,8 @@ test('routing generates the two chosen combos plus all four peers', async t => {
   assert.equal(lead.thinkingOptionId, 'high');
   assert.deepEqual(lead.featureValues, { auto_accept: true });
 
-  // The recorded projection still spans all fifteen owned ids — the
-  // non-chosen six are present:false, which is what drives removal.
+  // The recorded projection still spans every owned id — the
+  // non-chosen providers are present:false, which is what drives removal.
   const binding = readReceipt(home).binding;
   assert.deepEqual(Object.keys(binding.owned.providers).sort(), OWNED_IDS);
   for (const id of absentIds('pi', 'devin')) {
@@ -346,10 +345,10 @@ test('routing change on an existing binding removes non-chosen providers and rep
   const manager = createManager(deps);
   const store = createStateStore();
 
-  // Legacy all-fifteen binding first.
+  // Full current binding first.
   const first = await manager.activate(activateInput(home, deps.payload, randomUUID()), daemon);
   await waitTerminal(manager, home, first.operation.operationId, daemon);
-  assert.equal(Object.keys(slpProvidersOf(readConfigJson(home))).length, 18);
+  assert.equal(Object.keys(slpProvidersOf(readConfigJson(home))).length, 21);
 
   // Route supervisor → devin, lead → pi; re-activate the same candidate.
   await setRouting(store, home, { family: 'devin', model: 'swe-2-high' }, { family: 'pi' });
@@ -433,7 +432,7 @@ test('deactivation under a settings-driven binding still removes every owned id'
   await setRouting(store, home, { family: 'pi' }, { family: 'devin' });
   const act = await manager.activate(activateInput(home, deps.payload, randomUUID()), daemon);
   const doneAct = await waitTerminal(manager, home, act.operation.operationId, daemon);
-  assert.equal(Object.keys(slpProvidersOf(readConfigJson(home))).length, 8);
+  assert.equal(Object.keys(slpProvidersOf(readConfigJson(home))).length, 9);
 
   const deact = await manager.deactivate(
     deactivateInput(home, randomUUID(), doneAct.binding.bindingSha256),

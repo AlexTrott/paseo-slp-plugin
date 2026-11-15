@@ -190,7 +190,7 @@ capabilities. Installed dependency checks and extracted-target typechecks are
 reported separately.
 
 Roles are behavioral instructions, not a filesystem/MCP sandbox. Local
-transport checks cover Codex, Pi, Devin, Claude, OpenCode and Antigravity; fixture success
+transport checks cover Codex, Pi, Devin, Claude, OpenCode, Antigravity and Grok; fixture success
 does not establish live provider switching, heartbeat, council, compaction or
 full-manifest acceptance. Historical smoke evidence remains specific to its
 candidate and host; local `.local-checks/` artifacts are not distributed

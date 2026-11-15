@@ -14,18 +14,28 @@ import {
   FAMILY_IDS,
   FAMILY_LABEL,
   FAMILY_PICKER_ORDER,
+  GRANT_FAMILY_IDS,
   HOOK_FAMILY_IDS,
   HOOK_PROVIDER_ID_RE,
+  LEGACY_FAMILY_IDS,
+  LEGACY_OWNED_PROVIDER_IDS,
   MANAGED_FAMILY_PREFIX_RE,
   OWNED_PROVIDER_ID_RE,
   OWNED_PROVIDER_IDS,
+  PRE_ANTIGRAVITY_FAMILY_IDS,
+  PRE_ANTIGRAVITY_PROVIDER_IDS,
+  PRE_GROK_FAMILY_IDS,
+  PRE_GROK_PROVIDER_IDS,
   PROVIDER_EXTENDS,
   PROVIDER_EXTENDS_IDS,
   ROLES,
+  STANDALONE_PROVIDER_IDS,
   WRAPPER_FAMILY_IDS,
   WRAPPER_PROVIDER_ID_RE,
   familyFromProviderId,
   ownedProviderId,
+  persistedFamilyIds,
+  persistedProviderIds,
 } from '../plugin/shared/runtime/families.ts';
 import { Family, ProviderId } from '../plugin/shared/contracts.ts';
 import { FAMILIES as LAUNCHER_FAMILIES, GATE_FAMILIES, ROLES as LAUNCHER_ROLES } from '../plugin/server/launchers.ts';
@@ -34,14 +44,37 @@ import { FAMILIES as VIEW_FAMILIES, OWNED_PROVIDER_IDS as VIEW_OWNED, PROVIDER_E
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
-test('the registry declares the six current families on two transports', () => {
-  assert.deepEqual(FAMILY_IDS, ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity']);
+test('the registry declares the seven current families on two transports', () => {
+  assert.deepEqual(FAMILY_IDS, ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity', 'grok']);
   assert.deepEqual(HOOK_FAMILY_IDS, ['codex', 'pi', 'claude', 'antigravity']);
-  assert.deepEqual(WRAPPER_FAMILY_IDS, ['devin', 'opencode']);
+  assert.deepEqual(WRAPPER_FAMILY_IDS, ['devin', 'opencode', 'grok']);
   // The registry is pure — no imports at all, so the client bundle can
   // never pull a server-only or node module through it.
   const source = readFileSync(join(root, 'plugin/shared/runtime/families.ts'), 'utf8');
   assert.ok(!/^\s*import\s/m.test(source), 'families.ts must stay import-free');
+  const shim = readFileSync(join(root, 'bin/slp-shim.mjs'), 'utf8');
+  assert.match(shim, /const FAMILIES = \['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity', 'grok'\]/);
+  assert.match(shim, /const GRANT_WRAPPERS = \['opencode', 'grok'\]/);
+  assert.deepEqual(GRANT_FAMILY_IDS, ['codex', 'pi', 'claude', 'opencode', 'antigravity', 'grok']);
+});
+
+test('persisted domains keep frozen histories distinct from the standalone Grok set', () => {
+  assert.deepEqual(PRE_GROK_FAMILY_IDS, ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity']);
+  assert.equal(persistedFamilyIds(PRE_GROK_FAMILY_IDS), PRE_GROK_FAMILY_IDS);
+  assert.equal(persistedFamilyIds(PRE_ANTIGRAVITY_FAMILY_IDS), PRE_ANTIGRAVITY_FAMILY_IDS);
+  assert.equal(persistedFamilyIds(LEGACY_FAMILY_IDS), LEGACY_FAMILY_IDS);
+  assert.equal(persistedFamilyIds(FAMILY_IDS), FAMILY_IDS);
+  assert.equal(persistedProviderIds(PRE_GROK_PROVIDER_IDS), PRE_GROK_PROVIDER_IDS);
+  assert.equal(persistedProviderIds(STANDALONE_PROVIDER_IDS), STANDALONE_PROVIDER_IDS);
+  assert.equal(persistedProviderIds(PRE_ANTIGRAVITY_PROVIDER_IDS), PRE_ANTIGRAVITY_PROVIDER_IDS);
+  assert.equal(persistedProviderIds(LEGACY_OWNED_PROVIDER_IDS), LEGACY_OWNED_PROVIDER_IDS);
+  assert.equal(persistedProviderIds(OWNED_PROVIDER_IDS), OWNED_PROVIDER_IDS);
+  assert.equal(STANDALONE_PROVIDER_IDS.length, 18);
+  assert.notDeepEqual([...STANDALONE_PROVIDER_IDS], [...PRE_GROK_PROVIDER_IDS]);
+  const mixed = [...PRE_GROK_PROVIDER_IDS];
+  mixed[mixed.indexOf('slp-antigravity-peer')] = 'slp-grok-peer';
+  assert.equal(persistedProviderIds(mixed), null);
+  assert.equal(persistedFamilyIds(['codex', 'pi', 'devin', 'claude', 'opencode', 'grok']), null);
 });
 
 test('every slp-<family>-<role> id classifies correctly by transport', () => {
@@ -60,9 +93,9 @@ test('every slp-<family>-<role> id classifies correctly by transport', () => {
 });
 
 test('OWNED_PROVIDER_IDS is exactly the family × role cartesian product', () => {
-  assert.equal(OWNED_PROVIDER_IDS.length, 18);
+  assert.equal(OWNED_PROVIDER_IDS.length, 21);
   assert.equal(OWNED_PROVIDER_IDS.length, FAMILY_IDS.length * ROLES.length);
-  assert.equal(new Set(OWNED_PROVIDER_IDS).size, 18);
+  assert.equal(new Set(OWNED_PROVIDER_IDS).size, 21);
   assert.deepEqual(
     [...OWNED_PROVIDER_IDS].sort(),
     FAMILY_IDS.flatMap(family => ROLES.map(role => `slp-${family}-${role}`)).sort(),

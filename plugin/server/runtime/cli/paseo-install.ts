@@ -50,7 +50,7 @@ function readPaseoBinding(destination: string): PaseoBinding {
   const historicalProfiles = value.profiles;
   const codexIds = roles.map(role => providerId(role, 'codex'));
   const codex3 = providerKeys.length === 3 && codexIds.every(id => Object.hasOwn(value.providers as object, id));
-  if (persistedProviderIds(providerKeys) === null && !codex3) throw new Error('Invalid standalone binding: exact Codex3, legacy12, legacy15 or current18 provider domain required; preserve installation');
+  if (persistedProviderIds(providerKeys) === null && !codex3) throw new Error('Invalid standalone binding: exact Codex3, legacy12, legacy15, standalone18 or current21 provider domain required; preserve installation');
   if (codex3 && (historicalProfiles.length !== 3 || new Set(historicalProfiles.map(p => record(p) ? p.id : null)).size !== 3
     || !roles.every(role => historicalProfiles.some(p => record(p) && p.id === profileId(role) && p.provider === providerId(role, 'codex'))))) {
     throw new Error('Invalid standalone Codex3 profiles: exact historical supervisor/lead/peer rows required; preserve installation');

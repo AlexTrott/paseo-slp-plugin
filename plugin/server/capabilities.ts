@@ -412,6 +412,15 @@ const FAMILY_FACTS: Partial<Record<FamilyId, FamilyFacts>> = {
     resumeEvidence: "generic ACP restores config and sends cwd+mcpServers on load/resume; the wrapper rearms entry delivery",
     resumeLimitation: "ACP capability supportsMcpServers gates MCP; exact MCP preapproval and actual model delivery on ACP are not proven",
   },
+  grok: {
+    exactPreapproval: false,
+    contractRef: "@getpaseo/server@0.10.3:dist/server/server/agent/provider-registry.js#PROVIDER_CONTRACTS.acp",
+    mcpLaunchRef: "@getpaseo/server@0.10.3:dist/server/server/agent/providers/acp-agent.js#acpMcpServers",
+    mcpLaunchEvidence: "generic ACP carries stdio command/args/env in session/new when Grok advertises MCP; live child-env delivery unproven",
+    resumeRef: "@getpaseo/server@0.10.3:dist/server/server/agent/providers/acp-agent.js#resumeSession",
+    resumeEvidence: "generic ACP restores config and sends cwd+mcpServers on load/resume; the wrapper rearms entry delivery",
+    resumeLimitation: "ACP supportsMcpServers gates MCP; Grok model and thought_level delivery are not fleet-proven",
+  },
   codex: {
     exactPreapproval: true,
     mcpLaunchRef: src("packages/server/src/server/agent/providers/codex/codex-app-server-agent.ts"),

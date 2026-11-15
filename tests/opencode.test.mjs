@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, realpathSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +17,7 @@ import { loadHostModule } from './helpers/plugin-doubles.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 function fixture(t) {
-  const dir = mkdtempSync(join(tmpdir(), 'slp-opencode-test-'));
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'slp-opencode-test-')));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const candidate = join(dir, 'candidate');
   const { candidate: identity } = install(root, candidate);
@@ -153,7 +153,7 @@ test('managed OpenCode ACP shim refuses missing grants before child spawn; live 
   writeBinary('opencode v2.0.24');
   const home = join(f.dir, 'home'); const stableRoot = join(home, 'slp-runtime');
   const installed = join(stableRoot, f.sha); install(root, installed);
-  const binaries = Object.fromEntries(['codex','pi','devin','claude','opencode','antigravity'].map(id => [id, id === 'opencode' ? { available: true, path: fake, version: 'opencode v2.0.24' } : { available: false, path: null, version: null }]));
+  const binaries = Object.fromEntries(['codex','pi','devin','claude','opencode','antigravity','grok'].map(id => [id, id === 'opencode' ? { available: true, path: fake, version: 'opencode v2.0.24' } : { available: false, path: null, version: null }]));
   const set = await createLauncherBuilder().publish({ daemonHome: home, stableRoot, operationId: 'grant-proof', candidate: { sha256: f.sha, runtimePath: installed }, node: { path: process.execPath, version: process.versions.node, execPath: process.execPath }, binaries });
   const launcher = join(set.directory, 'slp-opencode-peer');
   const message = { jsonrpc: '2.0', id: 1, method: 'session/prompt', params: { sessionId: 's', prompt: [{ type: 'text', text: 'local echo fixture' }] } };

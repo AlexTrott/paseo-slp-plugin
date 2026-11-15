@@ -31,8 +31,14 @@ const RUNTIME_CONTROL_ENV_KEYS = [
 // NODE_OPTIONS is cleared as well: it would inject flags into the frozen
 // helper Node commands rendered through SLP_NODE_BIN.
 const STRIPPED_ENV_KEYS = [...RUNTIME_CONTROL_ENV_KEYS, 'NODE_OPTIONS'];
-const FAMILIES = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity'];
+// Current launch domain. The shim cannot import families.ts: it validates
+// argv and reports unsupported Node before any TypeScript load. Historical
+// manifests stay with the shim that published them.
+const FAMILIES = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity', 'grok'];
 const ROLES = ['supervisor', 'lead', 'peer'];
+// sessionGrant families. The wrapper consumes the grant, so the shim must
+// leave it intact until then. Every other family clears the sentinel.
+const GRANT_WRAPPERS = ['opencode', 'grok'];
 
 
 const fail = message => {
@@ -97,13 +103,13 @@ function runVersionProbe(binaryPath) {
 // the existing family wrapper with process.argv = [node, wrapper, role, args].
 // Its interception, passthrough, stdio, signal and exit-code behavior is
 // unchanged. PASEO_AGENT_ID passes through as context only — it never selects
-// a binding, and only OpenCode retains a session-open grant until its wrapper consumes
-// and strips it; the other wrapper paths reset the sentinel.
+// a binding. Grant-retaining wrappers consume the session-open grant; the
+// other wrapper paths reset the sentinel before the child starts.
 async function enterWrapper(manifest, family, role, nativeArgs) {
   for (const key of STRIPPED_ENV_KEYS) delete process.env[key];
-  if (family !== 'opencode') process.env.SLP_SESSION_OPEN_GRANT = '';
-  if (family === 'opencode' && process.env.PASEO_AGENT_ID && !process.env.SLP_SESSION_OPEN_GRANT) {
-    throw new Error('managed OpenCode session launched without live SLP hook grant');
+  if (!GRANT_WRAPPERS.includes(family)) process.env.SLP_SESSION_OPEN_GRANT = '';
+  if (GRANT_WRAPPERS.includes(family) && process.env.PASEO_AGENT_ID && !process.env.SLP_SESSION_OPEN_GRANT) {
+    throw new Error(`managed ${family} session launched without live SLP hook grant`);
   }
   process.env[`SLP_${family.toUpperCase()}_BIN`] = manifest.binaries[family].path;
   process.env.SLP_RUNTIME_ROOT = manifest.candidate.path;

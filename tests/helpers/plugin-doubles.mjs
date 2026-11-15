@@ -34,7 +34,7 @@ import { ProviderOverrideSchema } from '@getpaseo/protocol/provider-config';
 import { PinnedPersistedConfigSchema } from '../../plugin/server/config-transaction.ts';
 import { OperationConflict } from '../../plugin/shared/contracts.ts';
 
-export const FAMILIES = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity'];
+export const FAMILIES = ['codex', 'pi', 'devin', 'claude', 'opencode', 'antigravity', 'grok'];
 export const ROLES = ['supervisor', 'lead', 'peer'];
 export const OWNED_IDS = FAMILIES.flatMap(f => ROLES.map(r => `slp-${f}-${r}`)).sort();
 export const sha256 = data => createHash('sha256').update(data).digest('hex');
@@ -577,7 +577,9 @@ export async function makeDaemon(t, home, opts = {}) {
 // ---------------------------------------------------------------------------
 
 export function makeHome(t, config) {
-  const home = mkdtempSync(join(tmpdir(), 'slp-home-'));
+  // Receipts store the realpath. On macOS /tmp is a symlink, so a literal
+  // mkdtemp path would not match the canonical home the plugin records.
+  const home = realpathSync(mkdtempSync(join(tmpdir(), 'slp-home-')));
   t.after(() => rmSync(home, { recursive: true, force: true }));
   writeFileSync(join(home, 'config.json'), JSON.stringify(config ?? { version: 1, daemon: { mcp: { enabled: true } } }, null, 2) + '\n', { mode: 0o600 });
   return home;

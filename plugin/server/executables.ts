@@ -29,6 +29,7 @@ import type {
 
 import { FAMILY_IDS, FAMILY_EXECUTABLE } from "../shared/runtime/families.ts";
 import { supportsOpenCodeVersion, OPENCODE_VERSION_REQUIREMENT } from "../shared/runtime/opencode-version.mjs";
+import { supportsGrokVersion, GROK_VERSION_REQUIREMENT } from "../shared/runtime/grok-version.mjs";
 
 // The family set derives from the shared registry (families.ts) — the export
 // keeps its historical name so existing imports keep working.
@@ -343,6 +344,9 @@ async function checkBinary(
   const result = await probeBinary(tracked, ctx);
   if (family === "opencode" && result.available && !supportsOpenCodeVersion(result.version)) {
     throw new Error(`requires ${OPENCODE_VERSION_REQUIREMENT}; observed ${result.version}`);
+  }
+  if (family === "grok" && result.available && !supportsGrokVersion(result.version)) {
+    throw new Error(`requires ${GROK_VERSION_REQUIREMENT}; observed ${result.version}`);
   }
   return result;
 }

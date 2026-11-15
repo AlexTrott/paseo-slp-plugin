@@ -301,7 +301,8 @@ test('standalone legacy12 upgrade preserves retained bytes, original baseline an
   const receiptFile = join(destination, 'paseo-binding.json');
   const historical = readJson(receiptFile); const raw = readJson(join(home, 'config.json'));
   for (const role of ['supervisor', 'lead', 'peer']) {
-    delete historical.providers[`slp-opencode-${role}`]; delete raw.agents.providers[`slp-opencode-${role}`];
+    delete historical.providers[`slp-opencode-${role}`]; delete historical.providers[`slp-grok-${role}`];
+    delete raw.agents.providers[`slp-opencode-${role}`]; delete raw.agents.providers[`slp-grok-${role}`];
   }
   writeFileSync(receiptFile, json(historical));
   const manifestPath = join(destination, 'installed.json'); const manifest = readJson(manifestPath);
@@ -316,11 +317,12 @@ test('standalone legacy12 upgrade preserves retained bytes, original baseline an
   assert.deepEqual(readFileSync(receiptFile), oldReceiptBytes); assert.deepEqual(readFileSync(manifestPath), oldManifestBytes);
   upgradePaseo(source, target, destination, true);
   const next = readJson(join(target, 'paseo-binding.json'));
-  assert.equal(Object.keys(next.providers).length, 15); assert.deepEqual(next.mcpBefore, historical.mcpBefore);
+  assert.equal(Object.keys(next.providers).length, 18); assert.deepEqual(next.mcpBefore, historical.mcpBefore);
   assert.deepEqual(next.profiles.find(p => p.id === 'slp-lead'), selected);
   assert.deepEqual(readFileSync(receiptFile), oldReceiptBytes); assert.deepEqual(readFileSync(manifestPath), oldManifestBytes);
   assert.deepEqual(readJson(join(home, 'config.json')).agents.providers.personal, raw.agents.providers.personal);
   assert.equal(next.providers['slp-opencode-peer'].extends, 'acp');
+  assert.equal(next.providers['slp-grok-peer'].extends, 'acp');
 });
 
 test('standalone binding rejects partial/unknown domains before upgrade and preserves evidence and host bytes', t => {
@@ -331,7 +333,7 @@ test('standalone binding rejects partial/unknown domains before upgrade and pres
   for (const mutate of [r => delete r.providers['slp-pi-peer'], r => { r.providers['slp-future-peer'] = r.providers['slp-pi-peer']; }]) {
     const bad = structuredClone(original); mutate(bad); const bytes = json(bad); writeFileSync(receiptFile, bytes);
     const manifest = readJson(manifestFile); manifest.paseoBindingSha256 = hash(bytes); writeFileSync(manifestFile, json(manifest));
-    assert.throws(() => upgradePaseo(fakeSource(dir, `new-${Object.keys(bad.providers).length}`), join(dir, `invalid-${Object.keys(bad.providers).length}`), destination, true), /exact Codex3, legacy12, legacy15 or current18/);
+    assert.throws(() => upgradePaseo(fakeSource(dir, `new-${Object.keys(bad.providers).length}`), join(dir, `invalid-${Object.keys(bad.providers).length}`), destination, true), /exact Codex3, legacy12, legacy15, standalone18 or current21/);
     assert.deepEqual(readFileSync(join(home, 'config.json')), rawBefore); assert.equal(readFileSync(receiptFile, 'utf8'), bytes);
   }
 });
@@ -487,7 +489,7 @@ test('an intact installation updates in place, preserving tuned settings', t => 
   assert.equal(readFileSync(join(destination, 'src/roles.md'), 'utf8'), 'v2');
   assert.equal(existsSync(join(destination, 'plugin/server/runtime/cli/monitor.ts')), false);
   const cfg = readJson(join(home, 'config.json'));
-  assert.equal(Object.keys(cfg.agents.providers).filter(id => id.startsWith('slp-')).length, 15);
+  assert.equal(Object.keys(cfg.agents.providers).filter(id => id.startsWith('slp-')).length, 18);
   assert.equal(cfg.daemon.agentProfiles[0].modeId, 'full-access');
   assert.equal(readJson(join(destination, 'paseo-binding.json')).configPath, join(home, 'config.json'));
   assert.equal(installPaseo(source2, destination, home, true).alreadyInstalled, true);
